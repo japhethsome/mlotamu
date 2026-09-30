@@ -32,12 +32,12 @@ export default function Layout({ children }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link
             to="/"
-            className="flex items-center gap-3 font-extrabold text-2xl text-savori-brown dark:text-savori-cream"
+            className="flex items-center gap-3 font-extrabold text-2xl text-savori-brown dark:text-savori-cream group"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-md shadow-savori-green/30 overflow-hidden">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-savori-brown border border-savori-yellow/30 shadow-md shadow-savori-brown/25 overflow-hidden transition-transform duration-200 group-hover:scale-105">
               <img src="/logo.png" alt="Savori Logo" className="h-full w-full object-cover" />
             </span>
-            Savori
+            <span className="tracking-tight">Savori</span>
           </Link>
 
           <nav className="hidden items-center gap-2 md:flex">
