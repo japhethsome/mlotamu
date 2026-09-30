@@ -21,7 +21,7 @@ const menuItemSchema = z.object({
   description: z.string().min(10),
   price: z.number().positive(),
   image: z.string().url().optional().or(z.literal("")),
-  category: z.enum(["breakfast", "lunch", "supper"]),
+  category: z.enum(["breakfast", "lunch", "dinner", "supper"]),
   dietaryTags: z.array(z.string()).default([]),
   allergens: z.array(z.string()).default([]),
   stockQuantity: z.number().int().min(0),
@@ -38,8 +38,12 @@ router.get("/", async (req, res, next) => {
     const params = [];
 
     if (category) {
-      sql += " AND category = ?";
-      params.push(category);
+      if (category === "dinner" || category === "supper") {
+        sql += " AND (category = 'dinner' OR category = 'supper')";
+      } else {
+        sql += " AND category = ?";
+        params.push(category);
+      }
     }
 
     if (tag) {

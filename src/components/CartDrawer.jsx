@@ -60,7 +60,7 @@ export default function CartDrawer() {
                     <div>
                       <h3 className="font-semibold">{item.name}</h3>
                       <p className="text-sm text-slate-500">
-                        ${item.price.toFixed(2)}
+                        KSh {item.price.toFixed(2)}
                       </p>
                     </div>
                     <button
@@ -92,7 +92,7 @@ export default function CartDrawer() {
                         <Plus size={16} />
                       </button>
                     </div>
-                    <strong>${(item.price * item.quantity).toFixed(2)}</strong>
+                    <strong>KSh {(item.price * item.quantity).toFixed(2)}</strong>
                   </div>
                 </div>
               ))
@@ -103,15 +103,15 @@ export default function CartDrawer() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>KSh {subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>KSh {tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-semibold text-base">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>KSh {total.toFixed(2)}</span>
               </div>
             </div>
 

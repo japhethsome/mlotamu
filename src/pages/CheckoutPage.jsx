@@ -86,7 +86,7 @@ export default function CheckoutPage() {
                 <h3 className="font-semibold">{item.name}</h3>
                 <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
               </div>
-              <strong>${(item.price * item.quantity).toFixed(2)}</strong>
+              <strong>KSh {(item.price * item.quantity).toFixed(2)}</strong>
             </div>
           ))}
         </div>
@@ -120,7 +120,7 @@ export default function CheckoutPage() {
                   key={method}
                   type="button"
                   onClick={() => setPaymentMethod(method)}
-                  className={`rounded-2xl border px-4 py-3 text-left ${paymentMethod === method ? "border-brand-500 bg-brand-50 text-brand-700" : "border-slate-200 dark:border-slate-700"}`}
+                  className={`rounded-2xl border px-4 py-3 text-left ${paymentMethod === method ? "border-savori-orange bg-savori-orange/10 text-savori-orange" : "border-slate-200 dark:border-slate-700"}`}
                 >
                   {method.replace("_", " ")}
                 </button>
@@ -135,19 +135,19 @@ export default function CheckoutPage() {
         <div className="mt-5 space-y-2 text-sm">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>KSh {subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax</span>
-            <span>${tax.toFixed(2)}</span>
+            <span>KSh {tax.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tip</span>
-            <span>${Number(tip).toFixed(2)}</span>
+            <span>KSh {Number(tip).toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-base font-bold">
             <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span>KSh {total.toFixed(2)}</span>
           </div>
         </div>
 
@@ -171,7 +171,7 @@ export default function CheckoutPage() {
           disabled={submitting}
           className="btn-primary mt-6 w-full"
         >
-          {submitting ? "Processing..." : `Pay $${total.toFixed(2)}`}
+          {submitting ? "Processing..." : `Pay KSh ${total.toFixed(2)}`}
         </button>
       </aside>
     </div>

@@ -45,7 +45,7 @@ export default function AdminAnalyticsPage() {
             Revenue
           </p>
           <h3 className="mt-2 text-3xl font-bold">
-            ${Number(analytics.totals.revenue || 0).toFixed(2)}
+            KSh {Number(analytics.totals.revenue || 0).toFixed(2)}
           </h3>
         </div>
         <div className="card-surface p-5">

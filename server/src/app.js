@@ -4,6 +4,8 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import path from "node:path";
+import fs from "node:fs";
 
 import { env } from "./config/env.js";
 import authRoutes from "./routes/auth.js";
@@ -18,7 +20,7 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
-    origin: [env.clientUrl, "http://localhost:5173", "http://localhost:5174"],
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
   }),
 );
@@ -43,6 +45,16 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/admin", adminRoutes);
+
+// In single-directory deployment, serve built frontend assets if dist/ exists
+const distPath = path.resolve(process.cwd(), "dist");
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);

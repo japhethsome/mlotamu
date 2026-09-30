@@ -9,21 +9,21 @@ const meals = [
     key: "breakfast",
     label: "Breakfast",
     icon: Coffee,
-    hours: "06:00 - 10:30",
+    hours: "06:00 - 09:00",
     description: "Fresh, energizing favorites on the go.",
   },
   {
     key: "lunch",
     label: "Lunch",
     icon: Salad,
-    hours: "12:00 - 15:00",
+    hours: "11:00 - 14:00",
     description: "Balanced bowls, wraps, and seasonal mains.",
   },
   {
-    key: "supper",
-    label: "Supper",
+    key: "dinner",
+    label: "Dinner",
     icon: Utensils,
-    hours: "18:00 - 21:30",
+    hours: "16:00 - 20:00",
     description: "Hearty evening comfort dishes and warm plates.",
   },
 ];
@@ -43,7 +43,9 @@ export default function HomePage() {
     () =>
       meals.map((meal) => {
         const availableItems = items.filter(
-          (item) => item.category === meal.key,
+          (item) =>
+            item.category === meal.key ||
+            (meal.key === "dinner" && item.category === "supper"),
         );
         const hasOpenHours = availableItems.some(
           (item) =>

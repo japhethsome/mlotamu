@@ -29,7 +29,7 @@ export default function OrdersPage() {
           <div key={order.id} className="card-surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm uppercase tracking-[0.15em] text-brand-600">
+                <p className="text-sm uppercase tracking-[0.15em] text-savori-orange">
                   {order.order_number}
                 </p>
                 <h2 className="mt-1 text-xl font-bold">{order.status}</h2>
@@ -52,7 +52,7 @@ export default function OrdersPage() {
                     {item.menu_name} x {item.quantity}
                   </span>
                   <span>
-                    ${(Number(item.unit_price) * item.quantity).toFixed(2)}
+                    KSh {(Number(item.unit_price) * item.quantity).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -60,7 +60,7 @@ export default function OrdersPage() {
 
             <div className="mt-4 flex justify-between border-t border-slate-200 pt-3 text-sm font-medium dark:border-slate-700">
               <span>Total</span>
-              <span>${Number(order.total).toFixed(2)}</span>
+              <span>KSh {Number(order.total).toFixed(2)}</span>
             </div>
           </div>
         ))

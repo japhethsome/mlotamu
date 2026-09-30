@@ -46,7 +46,7 @@ export default function OrderConfirmationPage() {
                   <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
                 </div>
                 <span>
-                  ${(Number(item.unit_price) * item.quantity).toFixed(2)}
+                  KSh {(Number(item.unit_price) * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}
