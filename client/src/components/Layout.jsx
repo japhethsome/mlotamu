@@ -34,8 +34,8 @@ export default function Layout({ children }) {
             to="/"
             className="flex items-center gap-3 font-extrabold text-2xl text-savori-brown dark:text-savori-cream"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-savori-green text-white shadow-md shadow-savori-green/30">
-              <UtensilsCrossed size={24} />
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-md shadow-savori-green/30 overflow-hidden">
+              <img src="/logo.png" alt="Savori Logo" className="h-full w-full object-cover" />
             </span>
             Savori
           </Link>

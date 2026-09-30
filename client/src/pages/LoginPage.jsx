@@ -35,6 +35,9 @@ export default function LoginPage() {
     <div className="mx-auto flex min-h-[80vh] max-w-md items-center justify-center px-4">
       <div className="card-surface w-full p-6 sm:p-8">
         <div className="mb-6 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md shadow-savori-green/30 overflow-hidden">
+            <img src="/logo.png" alt="Savori Logo" className="h-full w-full object-cover" />
+          </div>
           <h1 className="text-3xl font-bold">Welcome back</h1>
           <p className="mt-2 text-sm text-slate-500">
             Sign in to your cafeteria account.
@@ -95,10 +98,10 @@ export default function LoginPage() {
           </button>
 
           <div className="flex items-center justify-between text-sm text-slate-500">
-            <button type="button" className="hover:text-brand-600">
+            <button type="button" className="hover:text-savori-orange">
               Forgot password?
             </button>
-            <Link to="/register" className="text-brand-600 hover:underline">
+            <Link to="/register" className="text-savori-orange hover:underline font-semibold">
               Create account
             </Link>
           </div>
