@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { Download, CheckCircle2, Clock, ShoppingBag, QrCode } from "lucide-react";
+import { Download, CheckCircle2, Clock, ShoppingBag, QrCode, FileText } from "lucide-react";
 import QRCode from "qrcode";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
+import OfficialReceiptModal from "../components/OfficialReceiptModal.jsx";
 
 const STATUS_CONFIG = {
   received:  { label: "Received",          color: "text-amber-600",   bg: "bg-amber-50  border-amber-200  dark:bg-amber-950/40 dark:border-amber-800" },
@@ -27,7 +28,7 @@ async function buildQR(text) {
 }
 
 /** Single order card with QR code + reference code. */
-function OrderCard({ order }) {
+function OrderCard({ order, onViewReceipt }) {
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [showQr, setShowQr] = useState(false);
 
@@ -71,9 +72,9 @@ function OrderCard({ order }) {
               <span className="rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 font-mono text-xs text-slate-500">
                 {order.order_number}
               </span>
-              {isPaid && !isCollected && (
+              {isPaid && (
                 <span className="rounded-lg bg-emerald-100 dark:bg-emerald-950 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                  ✓ Paid
+                  ✓ Paid via Phone
                 </span>
               )}
             </div>
@@ -122,9 +123,10 @@ function OrderCard({ order }) {
               )}
               <button
                 type="button"
+                onClick={() => onViewReceipt(order)}
                 className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
-                <Download size={13} /> Receipt
+                <FileText size={14} className="text-savori-orange" /> View Official Receipt
               </button>
             </div>
           </div>
@@ -172,6 +174,7 @@ export default function OrdersPage() {
   const { token } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -205,7 +208,22 @@ export default function OrdersPage() {
           <p className="mt-1 text-sm text-slate-400">Head to the menu and place your first order!</p>
         </div>
       ) : (
-        orders.map((order) => <OrderCard key={order.id} order={order} />)
+        orders.map((order) => (
+          <OrderCard
+            key={order.id}
+            order={order}
+            onViewReceipt={(ord) => setSelectedReceiptOrder(ord)}
+          />
+        ))
+      )}
+
+      {/* Official Receipt Modal */}
+      {selectedReceiptOrder && (
+        <OfficialReceiptModal
+          order={selectedReceiptOrder}
+          onClose={() => setSelectedReceiptOrder(null)}
+          isStaff={false}
+        />
       )}
     </div>
   );

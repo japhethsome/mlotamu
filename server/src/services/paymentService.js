@@ -24,13 +24,18 @@ export async function processPayment({
       };
     }
 
-    if (paymentMethod === "mobile_money") {
+    if (
+      paymentMethod === "mobile_money" ||
+      paymentMethod === "phone" ||
+      String(paymentMethod).toLowerCase().includes("phone") ||
+      String(paymentMethod).toLowerCase().includes("mpesa")
+    ) {
       return {
         success: true,
-        provider: "flutterwave",
+        provider: "mpesa",
         status: "paid",
         reference,
-        message: "Mobile money payment initiated",
+        message: "Phone M-Pesa payment processed successfully",
       };
     }
   }

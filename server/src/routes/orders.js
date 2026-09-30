@@ -48,7 +48,8 @@ const checkoutSchema = z.object({
       notes: z.string().optional(),
     }),
   ),
-  paymentMethod: z.enum(["card", "mobile_money", "wallet", "pay_at_counter"]),
+  paymentMethod: z.string().default("phone"),
+  phoneNumber: z.string().optional(),
   tip: z.number().default(0),
   promoCode: z.string().optional(),
   pickupTime: z.string().optional(),
@@ -136,7 +137,7 @@ router.post(
   validate(checkoutSchema),
   async (req, res, next) => {
     try {
-      const { items, paymentMethod, tip, promoCode, pickupTime } = req.body;
+      const { items, paymentMethod = "phone", phoneNumber, tip, promoCode, pickupTime } = req.body;
       if (!items.length)
         return res.status(400).json({ message: "Cart is empty." });
 
@@ -176,15 +177,19 @@ router.post(
       const paymentResult = await processPayment({
         amount: total,
         currency: process.env.BASE_CURRENCY || "USD",
-        paymentMethod,
+        paymentMethod: "phone",
         reference: `ord-${Date.now()}`,
       });
 
       if (!paymentResult.success) {
         return res.status(402).json({
-          message: "Payment failed. Please retry or choose another method.",
+          message: "Payment failed. Please retry phone payment.",
         });
       }
+
+      const recordedPaymentMethod = phoneNumber
+        ? `Phone (M-Pesa: ${phoneNumber})`
+        : "Phone (M-Pesa)";
 
       const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
       const token = randomUUID();
@@ -201,7 +206,7 @@ router.post(
           tax,
           Number(tip || 0),
           total,
-          paymentMethod,
+          recordedPaymentMethod,
           paymentResult.status,
           pickupTime || new Date(Date.now() + 15 * 60000).toISOString(),
           token,

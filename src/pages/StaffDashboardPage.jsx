@@ -19,10 +19,14 @@ import {
   User,
   Hash,
   Sparkles,
+  Camera,
+  CameraOff,
+  SwitchCamera,
 } from "lucide-react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
+import OfficialReceiptModal from "../components/OfficialReceiptModal.jsx";
 
 const MEAL_CATEGORIES = [
   {
@@ -63,8 +67,10 @@ export default function StaffDashboardPage() {
   const [verifyCode, setVerifyCode] = useState("");
   const [verifiedOrder, setVerifiedOrder] = useState(null);
   const [verifyMessage, setVerifyMessage] = useState({ text: "", type: "" });
-  const [scannerActive, setScannerActive] = useState(false);
-  const scannerRef = useRef(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [cameraFacing, setCameraFacing] = useState("environment");
+  const html5QrCodeRef = useRef(null);
 
   // Edit Meal Modal state
   const [editingMeal, setEditingMeal] = useState(null);
@@ -295,30 +301,75 @@ export default function StaffDashboardPage() {
     }
   };
 
-  // Camera QR scanner integration
-  useEffect(() => {
-    if (activeTab === "scanner" && !scannerRef.current) {
-      const scanner = new Html5QrcodeScanner(
-        "staff-qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false,
-      );
-
-      scanner.render(
-        async (decodedText) => {
-          handleVerifyCode(decodedText);
-        },
-        (err) => console.debug(err),
-      );
-
-      scannerRef.current = scanner;
-    }
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {});
-        scannerRef.current = null;
+  // Camera controls
+  const stopCamera = async () => {
+    try {
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current.clear();
       }
+    } catch (e) {
+      console.debug("Camera stop log:", e);
+    } finally {
+      setCameraActive(false);
+    }
+  };
+
+  const startCamera = async (facing = cameraFacing) => {
+    setCameraError("");
+    try {
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current.clear();
+      }
+      const element = document.getElementById("staff-camera-viewfinder");
+      if (!element) return;
+
+      const qrCode = new Html5Qrcode("staff-camera-viewfinder");
+      html5QrCodeRef.current = qrCode;
+
+      await qrCode.start(
+        { facingMode: facing },
+        {
+          fps: 15,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        async (decodedText) => {
+          await handleVerifyCode(decodedText);
+        },
+        () => {}
+      );
+      setCameraActive(true);
+    } catch (err) {
+      console.error("Camera error:", err);
+      setCameraActive(false);
+      setCameraError(
+        err?.message || "Unable to access device camera. Please grant camera permission or use the Reference Code input below."
+      );
+    }
+  };
+
+  const toggleCameraFacing = async () => {
+    const nextFacing = cameraFacing === "environment" ? "user" : "environment";
+    setCameraFacing(nextFacing);
+    if (cameraActive) {
+      await startCamera(nextFacing);
+    }
+  };
+
+  useEffect(() => {
+    let timeoutId;
+    if (activeTab === "scanner") {
+      timeoutId = setTimeout(() => {
+        startCamera();
+      }, 300);
+    } else {
+      stopCamera();
+    }
+    return () => {
+      clearTimeout(timeoutId);
+      stopCamera();
     };
   }, [activeTab]);
 
@@ -461,81 +512,15 @@ export default function StaffDashboardPage() {
         </div>
       </div>
 
-      {/* Verified Order Modal / Panel */}
-      {verifiedOrder ? (
-        <div className="card-surface p-6 border-2 border-emerald-500/60 shadow-2xl relative animate-in fade-in zoom-in-95">
-          <button
-            type="button"
-            onClick={() => setVerifiedOrder(null)}
-            className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
-          >
-            <X size={20} />
-          </button>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                Verified Order
-              </span>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                Ref Code: #{verifiedOrder.order_number?.replace("ORD-", "")} ({verifiedOrder.order_number})
-              </h2>
-              <p className="text-xs text-slate-500">
-                Customer: <strong>{verifiedOrder.customer_name || "Guest"}</strong> ({verifiedOrder.customer_email || "N/A"})
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`rounded-xl px-3 py-1 text-xs font-bold uppercase border ${getStatusBadge(verifiedOrder.status)}`}>
-                {verifiedOrder.status}
-              </span>
-              <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                Total: KSh {Number(verifiedOrder.total || 0).toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          {/* Line items of verified order */}
-          <div className="mt-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Items Ordered ({verifiedOrder.items?.length || 0}):
-            </h3>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 rounded-2xl border border-slate-200/80 bg-white/50 dark:border-slate-800 dark:bg-slate-900/50">
-              {verifiedOrder.items?.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 text-sm">
-                  <div>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {item.quantity}x {item.menu_name}
-                    </span>
-                    {item.notes ? (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                        Note: "{item.notes}"
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    KSh {(Number(item.unit_price) * item.quantity).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2 justify-end">
-            {verifiedOrder.status !== "collected" ? (
-              <button
-                type="button"
-                onClick={() => handleMarkCollected(verifiedOrder.id, verifiedOrder.qr_token || verifiedOrder.order_number)}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 font-bold text-sm text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition-colors"
-              >
-                <CheckCircle2 size={18} /> Mark as Handed Over / Collected
-              </button>
-            ) : (
-              <span className="flex items-center gap-1 text-sm font-bold text-slate-500">
-                <CheckCircle2 size={16} /> Order has been collected
-              </span>
-            )}
-          </div>
-        </div>
-      ) : null}
+      {/* Official Receipt Modal when Order is verified via QR or Ref Code */}
+      {verifiedOrder && (
+        <OfficialReceiptModal
+          order={verifiedOrder}
+          onClose={() => setVerifiedOrder(null)}
+          onMarkCollected={handleMarkCollected}
+          isStaff={true}
+        />
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
@@ -958,31 +943,130 @@ export default function StaffDashboardPage() {
       {/* TAB 3: QR CAMERA SCANNER */}
       {activeTab === "scanner" ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="card-surface p-6 border border-slate-200/80 dark:border-slate-800">
-            <h2 className="text-2xl font-bold mb-1 flex items-center gap-2 text-savori-brown dark:text-savori-cream">
-              <QrCode size={24} /> Camera QR Ticket Scanner
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Hold the customer's digital order QR code up to your device camera to instantly view and confirm line items.
-            </p>
+          <div className="card-surface p-6 border border-slate-200/80 dark:border-slate-800 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2 text-savori-brown dark:text-savori-cream">
+                  <Camera size={24} className="text-savori-orange" /> Device Camera QR Scanner
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Point device camera at the customer's QR code on their phone to scan their official receipt.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {cameraActive ? (
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="flex items-center gap-1.5 rounded-xl bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-rose-600 transition-colors"
+                  >
+                    <CameraOff size={14} /> Stop Camera
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                  >
+                    <Camera size={14} /> Start Camera
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleCameraFacing}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-colors"
+                  title="Switch camera"
+                >
+                  <SwitchCamera size={14} /> Flip
+                </button>
+              </div>
+            </div>
 
-            <div id="staff-qr-reader" className="min-h-[300px] rounded-2xl bg-slate-100 dark:bg-slate-900 overflow-hidden" />
+            {/* Viewfinder Container */}
+            <div className="relative overflow-hidden rounded-2xl bg-black border-2 border-slate-800 aspect-square max-h-[360px] w-full mx-auto flex items-center justify-center shadow-inner">
+              <div id="staff-camera-viewfinder" className="w-full h-full object-cover" />
+              {cameraActive && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="h-60 w-60 rounded-3xl border-2 border-dashed border-savori-orange/80 shadow-[0_0_25px_rgba(249,115,22,0.4)] animate-pulse flex items-center justify-center">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-savori-orange bg-black/75 px-3 py-1 rounded-full">
+                      Align QR Code Inside
+                    </span>
+                  </div>
+                </div>
+              )}
+              {!cameraActive && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-slate-400 bg-slate-900/95">
+                  <Camera size={44} className="mb-2 text-slate-500 opacity-60" />
+                  <p className="text-sm font-bold text-slate-200">Device Camera is Inactive</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                    Click "Start Camera" above to activate device camera scanning.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    className="mt-4 flex items-center gap-2 rounded-xl bg-savori-orange px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-savori-green transition-colors"
+                  >
+                    <Camera size={14} /> Turn On Camera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {cameraError ? (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+                <p className="font-bold">Camera Permission / Hardware Notice:</p>
+                <p>{cameraError}</p>
+              </div>
+            ) : null}
+
+            {/* Quick manual reference code fallback */}
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                Manual Reference Code / Token Lookup:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerifyCode()}
+                  placeholder="Enter 8-digit Ref Code (e.g. 84920194)"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm font-mono dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleVerifyCode()}
+                  className="rounded-xl bg-savori-brown px-4 py-2 text-xs font-bold text-white hover:bg-savori-orange transition-colors"
+                >
+                  Verify Code
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="card-surface p-6 border border-slate-200/80 dark:border-slate-800">
-            <h2 className="text-xl font-bold mb-2">Instructions for Kitchen Counter</h2>
-            <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">1</span>
-                <span>Customer displays their order QR code or 8-digit pickup reference code on their phone.</span>
+            <h2 className="text-xl font-bold mb-3">Kitchen Counter Instructions</h2>
+            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">1</span>
+                <div>
+                  <strong className="text-slate-900 dark:text-slate-100 block">Customer Shows QR or Ref Code</strong>
+                  <span className="text-xs text-slate-500">Customer presents their phone screen with the order QR code or 8-digit reference code.</span>
+                </div>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">2</span>
-                <span>The system verifies the ticket validity, shows what products they ordered, and payment confirmation.</span>
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">2</span>
+                <div>
+                  <strong className="text-slate-900 dark:text-slate-100 block">Official Receipt Appears Automatically</strong>
+                  <span className="text-xs text-slate-500">Scanning immediately displays the full official receipt with payment confirmation (PAID VIA PHONE), itemized meals, quantities, and customer details.</span>
+                </div>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">3</span>
-                <span>Click "Mark as Handed Over / Collected" to finalize the ticket and prevent duplicate claims.</span>
+              <li className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-savori-orange text-white text-xs font-bold">3</span>
+                <div>
+                  <strong className="text-slate-900 dark:text-slate-100 block">Hand Over & Mark Collected</strong>
+                  <span className="text-xs text-slate-500">Pack the ordered meals and click "Mark as Handed Over / Collected" on the receipt to close the ticket and prevent duplicate collection.</span>
+                </div>
               </li>
             </ul>
           </div>

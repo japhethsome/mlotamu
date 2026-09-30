@@ -75,27 +75,52 @@ export default function HomePage() {
             <Link
               key={key}
               to={`/menu/${key}`}
-              className="card-surface block overflow-hidden p-5 transition hover:-translate-y-1 hover:shadow-xl"
+              className={`card-surface block overflow-hidden p-5 transition hover:-translate-y-1 hover:shadow-xl ${
+                !open
+                  ? "border border-rose-300/40 bg-slate-50/60 opacity-85 dark:border-rose-900/30 dark:bg-slate-900/40"
+                  : ""
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-savori-green/15 text-savori-green shadow-sm">
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm ${
+                    open
+                      ? "bg-savori-green/15 text-savori-green"
+                      : "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400"
+                  }`}
+                >
                   <Icon size={26} />
                 </div>
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${open ? "bg-savori-green/20 text-savori-greenDark" : "bg-red-100 text-red-700"}`}
+                  className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${
+                    open
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                      : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                  }`}
                 >
                   {open ? "Open" : "Closed"}
                 </span>
               </div>
 
-              <h2 className="mt-5 text-2xl font-bold">{label}</h2>
+              <h2 className="mt-5 text-2xl font-bold flex items-center justify-between">
+                <span>{label}</span>
+                {!open && (
+                  <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase">
+                    Service Closed
+                  </span>
+                )}
+              </h2>
               <p className="mt-2 text-sm text-slate-500">{description}</p>
               <div className="mt-4 flex items-center justify-between text-sm">
                 <span className="font-medium text-slate-700 dark:text-slate-200">
                   {hours}
                 </span>
-                <span className="inline-flex items-center gap-2 font-semibold text-savori-orange">
-                  {items.length} items <ArrowRight size={15} />
+                <span
+                  className={`inline-flex items-center gap-2 font-semibold ${
+                    open ? "text-savori-orange" : "text-slate-400"
+                  }`}
+                >
+                  {open ? `${items.length} items` : "Disabled"} <ArrowRight size={15} />
                 </span>
               </div>
             </Link>
