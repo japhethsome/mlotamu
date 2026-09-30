@@ -47,13 +47,10 @@ export default function HomePage() {
             item.category === meal.key ||
             (meal.key === "dinner" && item.category === "supper"),
         );
-        const hasOpenHours = availableItems.some(
-          (item) =>
-            item.servingHours &&
-            item.servingHours.start &&
-            item.servingHours.end,
-        );
-        return { ...meal, items: availableItems, open: hasOpenHours };
+        const isOpen =
+          availableItems.length > 0 &&
+          availableItems.some((item) => item.isAvailable);
+        return { ...meal, items: availableItems, open: isOpen };
       }),
     [items],
   );

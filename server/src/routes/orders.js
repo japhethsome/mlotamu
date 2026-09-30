@@ -150,16 +150,13 @@ router.post(
             .status(404)
             .json({ message: `Menu item ${item.id} no longer exists.` });
         if (!row.is_available)
-          return res.status(400).json({ message: `${row.name} is sold out.` });
+          return res
+            .status(400)
+            .json({ message: `The ${row.category} menu (${row.name}) is currently closed.` });
         if (row.stock_quantity < item.quantity)
           return res
             .status(400)
             .json({ message: `${row.name} does not have enough stock.` });
-        if (!isMealOpen(normalizeMenuItem(row))) {
-          return res
-            .status(400)
-            .json({ message: `The ${row.category} menu is currently closed.` });
-        }
         itemLookup.push({
           ...normalizeMenuItem(row),
           quantity: item.quantity,
