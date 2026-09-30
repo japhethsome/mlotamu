@@ -91,8 +91,12 @@ router.get(
 
       const enriched = await Promise.all(
         rows.map(async (order) => {
+          // Join menu_items so each item carries its category for staff filtering
           const items = await allSql(
-            "SELECT * FROM order_items WHERE order_id = ?",
+            `SELECT oi.*, mi.category AS item_category
+             FROM order_items oi
+             LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+             WHERE oi.order_id = ?`,
             [order.id],
           );
           return { ...order, items };

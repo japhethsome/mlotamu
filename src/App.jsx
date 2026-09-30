@@ -20,6 +20,15 @@ function ProtectedRoute({ children, roles }) {
   return children;
 }
 
+/** Redirects staff → /staff and admin → /admin; customers see the page as-is. */
+function CustomerRoute({ children }) {
+  const { token, user } = useAuth();
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role === "admin") return <Navigate to="/admin" replace />;
+  if (user?.role === "staff") return <Navigate to="/staff" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -29,11 +38,11 @@ export default function App() {
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <CustomerRoute>
             <Layout>
               <HomePage />
             </Layout>
-          </ProtectedRoute>
+          </CustomerRoute>
         }
       />
 

@@ -55,6 +55,7 @@ export default function StaffDashboardPage() {
   const [menuItems, setMenuItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [mealFilter, setMealFilter] = useState("all"); // "all", "breakfast", "lunch", "dinner"
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -321,10 +322,38 @@ export default function StaffDashboardPage() {
     };
   }, [activeTab]);
 
+  // Helper: does this order contain items from a given meal category?
+  const orderHasMeal = (order, category) => {
+    if (category === "all") return true;
+    return order.items?.some((i) => {
+      const cat = (i.item_category || "").toLowerCase();
+      // treat "supper" as dinner
+      if (category === "dinner") return cat === "dinner" || cat === "supper";
+      return cat === category;
+    });
+  };
+
+  // Derive primary meal label for an order (for the badge)
+  const getPrimaryMeal = (order) => {
+    const categories = (order.items || []).map((i) =>
+      (i.item_category || "").toLowerCase() === "supper" ? "dinner" : (i.item_category || "").toLowerCase()
+    );
+    const priority = ["breakfast", "lunch", "dinner"];
+    return priority.find((c) => categories.includes(c)) || "other";
+  };
+
+  const MEAL_BADGE_COLORS = {
+    breakfast: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+    lunch: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
+    dinner: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300",
+    other: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  };
+
   // Filtering orders
   const filteredOrders = orders.filter((order) => {
     const matchesStatus =
       statusFilter === "all" ? true : order.status === statusFilter;
+    const matchesMeal = orderHasMeal(order, mealFilter);
     const matchesQuery =
       !searchQuery ||
       order.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -333,7 +362,7 @@ export default function StaffDashboardPage() {
       order.items?.some((i) =>
         i.menu_name?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
-    return matchesStatus && matchesQuery;
+    return matchesStatus && matchesMeal && matchesQuery;
   });
 
   const getStatusBadge = (status) => {
@@ -593,7 +622,44 @@ export default function StaffDashboardPage() {
             ))}
           </div>
 
-          {/* Search & Filter Controls */}
+          {/* Meal Category Tabs */}
+          <div className="card-surface border border-slate-200 dark:border-slate-800 p-3 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">Filter by Meal Service</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "all", label: "All Meals", icon: "🍽️" },
+                { key: "breakfast", label: "Breakfast", icon: "☕" },
+                { key: "lunch", label: "Lunch", icon: "🥗" },
+                { key: "dinner", label: "Dinner", icon: "🍛" },
+              ].map(({ key, label, icon }) => {
+                const count = key === "all"
+                  ? orders.filter((o) => o.status !== "collected" && o.status !== "cancelled").length
+                  : orders.filter((o) => orderHasMeal(o, key) && o.status !== "collected" && o.status !== "cancelled").length;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setMealFilter(key)}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all border ${
+                      mealFilter === key
+                        ? "bg-savori-brown text-white border-savori-brown shadow-md dark:bg-savori-orange dark:border-savori-orange"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    }`}
+                  >
+                    <span>{icon}</span>
+                    {label}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-black ${
+                      mealFilter === key ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Search & Status Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-3 text-slate-400" size={16} />
@@ -642,12 +708,13 @@ export default function StaffDashboardPage() {
                       {/* Order Header with Ref Code */}
                       <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="rounded-lg bg-orange-100 px-2.5 py-0.5 font-mono text-xs font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300">
                               REF: #{refCode}
                             </span>
-                            <span className="font-mono text-xs text-slate-400">
-                              {order.order_number}
+                            {/* Meal category badge */}
+                            <span className={`rounded-lg px-2.5 py-0.5 text-xs font-bold capitalize ${MEAL_BADGE_COLORS[getPrimaryMeal(order)]}`}>
+                              {getPrimaryMeal(order) === "other" ? "Mixed" : getPrimaryMeal(order)}
                             </span>
                           </div>
                           <p className="mt-1 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">

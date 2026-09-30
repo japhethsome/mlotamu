@@ -10,7 +10,14 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    return (
+      <Navigate
+        to={user.role === "admin" ? "/admin" : user.role === "staff" ? "/staff" : "/"}
+        replace
+      />
+    );
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault();

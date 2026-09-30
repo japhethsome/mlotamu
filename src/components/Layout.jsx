@@ -31,7 +31,7 @@ export default function Layout({ children }) {
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-savori-brownLight dark:bg-savori-brown/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link
-            to="/"
+            to={user?.role === "admin" ? "/admin" : user?.role === "staff" ? "/staff" : "/"}
             className="flex items-center gap-3 font-extrabold text-2xl text-savori-brown dark:text-savori-cream group"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-savori-brown border border-savori-yellow/30 shadow-md shadow-savori-brown/25 overflow-hidden transition-transform duration-200 group-hover:scale-105">
@@ -40,13 +40,17 @@ export default function Layout({ children }) {
             <span className="tracking-tight">Savori</span>
           </Link>
 
-          <nav className="hidden items-center gap-2 md:flex">
-            <NavLink to="/" className={navClasses}>
-              {t("home")}
-            </NavLink>
-            <NavLink to="/orders" className={navClasses}>
-              {t("orders")}
-            </NavLink>
+          <nav className="flex items-center gap-1 sm:gap-2">
+            {!user?.role || user.role === "customer" ? (
+              <>
+                <NavLink to="/" className={navClasses}>
+                  {t("home")}
+                </NavLink>
+                <NavLink to="/orders" className={navClasses}>
+                  {t("orders")}
+                </NavLink>
+              </>
+            ) : null}
             {user?.role === "staff" || user?.role === "admin" ? (
               <NavLink to="/staff" className={navClasses}>
                 {t("dashboard")}
@@ -82,21 +86,24 @@ export default function Layout({ children }) {
               {theme === "dark" ? <SunMedium size={18} /> : <Moon size={18} />}
             </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
-              }
-              className="relative rounded-xl border border-slate-200 bg-white p-2 text-savori-brown dark:text-savori-cream dark:border-savori-brownLight dark:bg-savori-brown hover:bg-savori-orange/10 transition-colors"
-              aria-label="Cart"
-            >
-              <ShoppingCart size={18} />
-              {itemCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-savori-orange px-1 text-[10px] font-bold text-white shadow-sm shadow-savori-orange/50">
-                  {itemCount}
-                </span>
-              ) : null}
-            </button>
+            {/* Cart button — customers only */}
+            {!user?.role || user.role === "customer" ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
+                }
+                className="relative rounded-xl border border-slate-200 bg-white p-2 text-savori-brown dark:text-savori-cream dark:border-savori-brownLight dark:bg-savori-brown hover:bg-savori-orange/10 transition-colors"
+                aria-label="Cart"
+              >
+                <ShoppingCart size={18} />
+                {itemCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-savori-orange px-1 text-[10px] font-bold text-white shadow-sm shadow-savori-orange/50">
+                    {itemCount}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
 
             {user ? (
               <button
@@ -116,24 +123,29 @@ export default function Layout({ children }) {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
-      <CartDrawer />
-      <div className="fixed bottom-4 right-4 z-40 md:hidden">
-        <button
-          type="button"
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-savori-orange text-white shadow-xl shadow-savori-orange/40 hover:bg-savori-green hover:shadow-savori-green/40 transition-all transform hover:scale-105"
-          aria-label="Open cart"
-          onClick={() =>
-            document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
-          }
-        >
-          <ShoppingCart size={24} />
-          {itemCount > 0 ? (
-            <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-savori-green px-1 text-xs font-bold text-white shadow-md">
-              {itemCount}
-            </span>
-          ) : null}
-        </button>
-      </div>
+      {/* CartDrawer + mobile FAB — customers only */}
+      {!user?.role || user.role === "customer" ? (
+        <>
+          <CartDrawer />
+          <div className="fixed bottom-4 right-4 z-40 md:hidden">
+            <button
+              type="button"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-savori-orange text-white shadow-xl shadow-savori-orange/40 hover:bg-savori-green hover:shadow-savori-green/40 transition-all transform hover:scale-105"
+              aria-label="Open cart"
+              onClick={() =>
+                document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
+              }
+            >
+              <ShoppingCart size={24} />
+              {itemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-savori-green px-1 text-xs font-bold text-white shadow-md">
+                  {itemCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
