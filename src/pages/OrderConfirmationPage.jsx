@@ -21,14 +21,19 @@ export default function OrderConfirmationPage() {
             <CheckCircle2 size={42} />
           </div>
         </div>
-        <h1 className="mt-4 text-4xl font-bold text-emerald-600">
-          Order confirmed
+        <h1 className="mt-4 text-4xl font-black text-emerald-600">
+          Order Confirmed!
         </h1>
-        <p className="mt-2 text-slate-500">
-          Your order number is{" "}
-          <span className="font-semibold text-slate-900">
-            {order.order_number}
+        <div className="mt-3 inline-block rounded-2xl bg-orange-100 dark:bg-orange-950 px-5 py-2.5 border border-orange-200 dark:border-orange-800">
+          <span className="text-xs uppercase font-bold tracking-wider text-orange-800 dark:text-orange-300 block">
+            Pickup Reference Code
           </span>
+          <span className="text-2xl font-black font-mono text-savori-brown dark:text-savori-cream">
+            #{order.order_number?.replace("ORD-", "") || order.id}
+          </span>
+        </div>
+        <p className="mt-3 text-xs sm:text-sm text-slate-500">
+          Order #{order.order_number} • Show this reference code or the QR code at the counter.
         </p>
       </div>
 

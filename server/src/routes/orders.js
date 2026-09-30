@@ -336,23 +336,56 @@ router.post(
   async (req, res, next) => {
     try {
       const { token } = req.body;
-      const record = await getSql(
-        "SELECT * FROM qr_tokens WHERE token = ? AND status = ?",
-        [token, "valid"],
-      );
-      if (!record)
+      if (!token) {
         return res
           .status(400)
-          .json({ message: "Invalid or already used QR code." });
+          .json({ message: "Verification token or reference code is required." });
+      }
 
-      const order = await getSql("SELECT * FROM orders WHERE id = ?", [
-        record.order_id,
-      ]);
+      const cleanToken = String(token).trim();
+
+      let order = await getSql(
+        `SELECT o.*, u.name AS customer_name, u.email AS customer_email
+         FROM orders o
+         JOIN users u ON u.id = o.customer_id
+         WHERE o.qr_token = ? 
+            OR o.order_number = ? 
+            OR o.order_number LIKE ?
+            OR o.id = ?`,
+        [cleanToken, cleanToken, `%${cleanToken}%`, Number(cleanToken) || -1],
+      );
+
+      if (!order) {
+        const qrRecord = await getSql(
+          "SELECT * FROM qr_tokens WHERE token = ?",
+          [cleanToken],
+        );
+        if (qrRecord) {
+          order = await getSql(
+            `SELECT o.*, u.name AS customer_name, u.email AS customer_email
+             FROM orders o
+             JOIN users u ON u.id = o.customer_id
+             WHERE o.id = ?`,
+            [qrRecord.order_id],
+          );
+        }
+      }
+
+      if (!order) {
+        return res
+          .status(400)
+          .json({ message: "No active order found matching this code." });
+      }
+
       const items = await allSql(
         "SELECT * FROM order_items WHERE order_id = ?",
-        [record.order_id],
+        [order.id],
       );
-      res.json({ valid: true, order: { ...order, items } });
+
+      res.json({
+        valid: order.status !== "cancelled",
+        order: { ...order, items },
+      });
     } catch (error) {
       next(error);
     }
@@ -365,25 +398,48 @@ router.post(
   authorize("staff", "admin"),
   async (req, res, next) => {
     try {
-      const { token } = req.body;
-      const record = await getSql(
-        "SELECT * FROM qr_tokens WHERE token = ? AND status = ?",
-        [token, "valid"],
-      );
-      if (!record)
-        return res
-          .status(400)
-          .json({ message: "Invalid or already used QR code." });
+      const { token, orderId } = req.body;
+      const cleanToken = token ? String(token).trim() : null;
+
+      let targetOrder = null;
+      if (orderId) {
+        targetOrder = await getSql("SELECT * FROM orders WHERE id = ?", [orderId]);
+      } else if (cleanToken) {
+        targetOrder = await getSql(
+          "SELECT * FROM orders WHERE qr_token = ? OR order_number = ? OR order_number LIKE ?",
+          [cleanToken, cleanToken, `%${cleanToken}%`],
+        );
+        if (!targetOrder) {
+          const qrRecord = await getSql(
+            "SELECT * FROM qr_tokens WHERE token = ?",
+            [cleanToken],
+          );
+          if (qrRecord) {
+            targetOrder = await getSql("SELECT * FROM orders WHERE id = ?", [
+              qrRecord.order_id,
+            ]);
+          }
+        }
+      }
+
+      if (!targetOrder) {
+        return res.status(400).json({ message: "Order not found." });
+      }
 
       await runSql(
-        "UPDATE qr_tokens SET status = ?, used_at = CURRENT_TIMESTAMP WHERE id = ?",
-        ["used", record.id],
+        "UPDATE qr_tokens SET status = 'used', used_at = CURRENT_TIMESTAMP WHERE order_id = ?",
+        [targetOrder.id],
       );
       await runSql(
-        "UPDATE orders SET status = ?, qr_used_at = CURRENT_TIMESTAMP WHERE id = ?",
-        ["collected", record.order_id],
+        "UPDATE orders SET status = 'collected', qr_used_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [targetOrder.id],
       );
-      res.json({ message: "Order marked as collected." });
+
+      emitOrderUpdate({ ...targetOrder, status: "collected" });
+      res.json({
+        message: "Order marked as collected.",
+        orderId: targetOrder.id,
+      });
     } catch (error) {
       next(error);
     }

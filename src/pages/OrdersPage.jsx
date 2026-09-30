@@ -29,10 +29,20 @@ export default function OrdersPage() {
           <div key={order.id} className="card-surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm uppercase tracking-[0.15em] text-savori-orange">
-                  {order.order_number}
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg bg-orange-100 dark:bg-orange-950 px-2.5 py-1 text-xs font-mono font-bold text-savori-orange">
+                    REF: #{order.order_number?.replace("ORD-", "") || order.id}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    {order.order_number}
+                  </span>
+                </div>
+                <h2 className="mt-1 text-lg font-bold capitalize text-slate-900 dark:text-slate-100">
+                  Status: <span className={order.status === "collected" ? "text-slate-500" : "text-savori-green font-black"}>{order.status}</span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Placed on {new Date(order.created_at).toLocaleString()}
                 </p>
-                <h2 className="mt-1 text-xl font-bold">{order.status}</h2>
               </div>
               <button
                 type="button"

@@ -195,6 +195,108 @@ router.put(
   },
 );
 
+router.post(
+  "/category-toggle",
+  authenticate,
+  authorize("staff", "admin"),
+  async (req, res, next) => {
+    try {
+      const { category, isAvailable } = req.body;
+      if (!category) {
+        return res.status(400).json({ message: "Category is required." });
+      }
+
+      const availableVal = isAvailable ? 1 : 0;
+      let sql = "UPDATE menu_items SET is_available = ?, updated_at = CURRENT_TIMESTAMP WHERE category = ?";
+      const params = [availableVal, category];
+
+      if (category === "dinner" || category === "supper") {
+        sql = "UPDATE menu_items SET is_available = ?, updated_at = CURRENT_TIMESTAMP WHERE category = 'dinner' OR category = 'supper'";
+        params.pop();
+      }
+
+      await runSql(sql, params);
+      res.json({
+        message: `${category} category is now ${isAvailable ? "open" : "closed"}.`,
+        category,
+        isAvailable: !!isAvailable,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.patch(
+  "/:id/availability",
+  authenticate,
+  authorize("staff", "admin"),
+  async (req, res, next) => {
+    try {
+      const { isAvailable } = req.body;
+      await runSql(
+        "UPDATE menu_items SET is_available = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [isAvailable ? 1 : 0, req.params.id],
+      );
+      const updated = await getSql("SELECT * FROM menu_items WHERE id = ?", [
+        req.params.id,
+      ]);
+      res.json(normalizeMenuItem(updated));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.patch(
+  "/:id/serving-hours",
+  authenticate,
+  authorize("staff", "admin"),
+  async (req, res, next) => {
+    try {
+      const { start, end } = req.body;
+      if (!start || !end) {
+        return res.status(400).json({ message: "Start and end serving times are required." });
+      }
+      await runSql(
+        "UPDATE menu_items SET serving_hours = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [JSON.stringify({ start, end }), req.params.id],
+      );
+      const updated = await getSql("SELECT * FROM menu_items WHERE id = ?", [
+        req.params.id,
+      ]);
+      res.json(normalizeMenuItem(updated));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.patch(
+  "/:id/stock",
+  authenticate,
+  authorize("staff", "admin"),
+  async (req, res, next) => {
+    try {
+      const { stockQuantity } = req.body;
+      const parsed = Number(stockQuantity);
+      if (Number.isNaN(parsed) || parsed < 0) {
+        return res.status(400).json({ message: "Stock quantity must be a non-negative number." });
+      }
+      await runSql(
+        "UPDATE menu_items SET stock_quantity = ?, is_available = CASE WHEN ? > 0 THEN is_available ELSE 0 END, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [parsed, parsed, req.params.id],
+      );
+      const updated = await getSql("SELECT * FROM menu_items WHERE id = ?", [
+        req.params.id,
+      ]);
+      res.json(normalizeMenuItem(updated));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 router.delete(
   "/:id",
   authenticate,
