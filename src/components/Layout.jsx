@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   Bell,
+  Menu,
   Moon,
   ShoppingCart,
   SunMedium,
   UtensilsCrossed,
+  User,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import CartDrawer from "./CartDrawer.jsx";
+import MobileSidebar from "./MobileSidebar.jsx";
 
 const navClasses = ({ isActive }) =>
   `rounded-xl px-3 py-2 text-sm font-medium transition ${
@@ -24,23 +28,40 @@ export default function Layout({ children }) {
   const { items } = useCart();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-transparent text-slate-900 dark:text-slate-100">
-      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-savori-brownLight dark:bg-savori-brown/90">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link
-            to={user?.role === "admin" ? "/admin" : user?.role === "staff" ? "/staff" : "/"}
-            className="flex items-center gap-3 font-extrabold text-2xl text-savori-brown dark:text-savori-cream group"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-savori-brown border border-savori-yellow/30 shadow-md shadow-savori-brown/25 overflow-hidden transition-transform duration-200 group-hover:scale-105">
-              <img src="/logo.png" alt="Savori Logo" className="h-full w-full object-cover" />
-            </span>
-            <span className="tracking-tight">Savori</span>
-          </Link>
+      {/* Mobile Sliding Sidebar */}
+      <MobileSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
-          <nav className="flex items-center gap-1 sm:gap-2">
+      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-savori-brownLight dark:bg-savori-brown/90">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
+          {/* Left: Mobile Hamburger + Brand Logo */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-savori-orange/10 hover:text-savori-orange md:hidden transition-colors shadow-sm"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+
+            <Link
+              to={user?.role === "admin" ? "/admin" : user?.role === "staff" ? "/staff" : "/"}
+              className="flex items-center gap-2 sm:gap-3 font-extrabold text-xl sm:text-2xl text-savori-brown dark:text-savori-cream group"
+            >
+              <span className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-savori-brown border border-savori-yellow/30 shadow-md shadow-savori-brown/25 overflow-hidden transition-transform duration-200 group-hover:scale-105">
+                <img src="/logo.png" alt="Savori Logo" className="h-full w-full object-cover" />
+              </span>
+              <span className="tracking-tight">Savori</span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation Links (hidden on mobile, served in MobileSidebar) */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-2">
             {!user?.role || user.role === "customer" ? (
               <>
                 <NavLink to="/" className={navClasses}>
@@ -85,7 +106,8 @@ export default function Layout({ children }) {
             ) : null}
           </nav>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop Right Header Controls */}
+          <div className="hidden md:flex items-center gap-2">
             <select
               value={language}
               onChange={(event) => setLanguage(event.target.value)}
@@ -138,6 +160,56 @@ export default function Layout({ children }) {
             ) : (
               <Link to="/login" className="btn-primary px-3 py-2 text-sm">
                 {t("login")}
+              </Link>
+            )}
+          </div>
+
+          {/* Mobile Right Quick Action Icons */}
+          <div className="flex md:hidden items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 dark:text-slate-200 dark:border-slate-800 dark:bg-slate-800 shadow-sm"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <SunMedium size={17} className="text-amber-400" /> : <Moon size={17} />}
+            </button>
+
+            {/* Cart Button */}
+            {!user?.role || user.role === "customer" ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
+                }
+                className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-700 dark:text-slate-200 dark:border-slate-800 dark:bg-slate-800 shadow-sm"
+                aria-label="Cart"
+              >
+                <ShoppingCart size={17} />
+                {itemCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-savori-orange px-1 text-[9px] font-black text-white shadow">
+                    {itemCount}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
+
+            {/* User Profile Avatar / Sign In */}
+            {user ? (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-savori-orange/15 font-black text-xs text-savori-orange border border-savori-orange/30 shadow-sm"
+                title={user.name || user.email}
+              >
+                {(user.name || user.email || "U")[0].toUpperCase()}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="rounded-xl bg-savori-orange px-3 py-1.5 text-xs font-bold text-white shadow-sm"
+              >
+                Login
               </Link>
             )}
           </div>

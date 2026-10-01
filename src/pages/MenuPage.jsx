@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Search, Star, Lock, AlertCircle, Plus } from "lucide-react";
-import { useParams } from "react-router-dom";
+import {
+  Heart,
+  Search,
+  Star,
+  Lock,
+  AlertCircle,
+  Plus,
+  Coffee,
+  Salad,
+  Utensils,
+  Sparkles,
+} from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
@@ -8,8 +19,14 @@ import { getRealisticFoodImage } from "../lib/foodImages.js";
 
 const tags = ["vegetarian", "vegan", "halal", "gluten-free"];
 
+const MEAL_SERVICES = [
+  { key: "breakfast", label: "Breakfast", hours: "06:00 – 09:00", icon: Coffee },
+  { key: "lunch", label: "Lunch", hours: "11:00 – 14:00", icon: Salad },
+  { key: "dinner", label: "Dinner", hours: "16:00 – 20:00", icon: Utensils },
+];
+
 export default function MenuPage() {
-  const { category } = useParams();
+  const { category = "breakfast" } = useParams();
   const { token } = useAuth();
   const { addItem } = useCart();
   const [items, setItems] = useState([]);
@@ -38,7 +55,32 @@ export default function MenuPage() {
   const isCategoryClosed = items.length > 0 && items.every((item) => !item.isAvailable);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Clickable Meal Service Tabs (Mobile & Desktop) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {MEAL_SERVICES.map((cat) => {
+          const isActive = (category || "breakfast").toLowerCase() === cat.key;
+          const CatIcon = cat.icon;
+          return (
+            <Link
+              key={cat.key}
+              to={`/menu/${cat.key}`}
+              className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all shadow-sm ${
+                isActive
+                  ? "bg-savori-orange text-white shadow-savori-orange/30 shadow-md scale-[1.02]"
+                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 hover:border-savori-orange/40 hover:bg-slate-50 dark:hover:bg-slate-700/60"
+              }`}
+            >
+              <CatIcon size={16} />
+              <span>{cat.label}</span>
+              <span className={`text-[10px] font-normal hidden sm:inline ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                ({cat.hours})
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
       {/* Category Closed Alert Banner */}
       {isCategoryClosed && (
         <div className="flex items-center gap-3 rounded-2xl border-2 border-rose-500/30 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/40">
@@ -56,11 +98,11 @@ export default function MenuPage() {
         </div>
       )}
 
-      <div className="card-surface p-4">
+      <div className="card-surface p-3.5 sm:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm uppercase tracking-[0.15em] text-savori-orange font-bold">
+              <p className="text-xs sm:text-sm uppercase tracking-[0.15em] text-savori-orange font-bold">
                 {category}
               </p>
               {isCategoryClosed ? (
@@ -73,7 +115,7 @@ export default function MenuPage() {
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold capitalize">{category} menu</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold capitalize mt-0.5">{category} menu</h1>
           </div>
           <div className="relative md:w-80">
             <Search
@@ -84,17 +126,18 @@ export default function MenuPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search menu"
-              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 dark:border-slate-700 dark:bg-slate-800"
+              placeholder="Search dishes..."
+              className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 sm:py-3 pl-10 pr-4 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange"
             />
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        {/* Dietary Filter Tags - Horizontally Scrollable on Mobile */}
+        <div className="mt-3 sm:mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
             onClick={() => setSelectedTag("all")}
-            className={`rounded-full px-3 py-2 text-sm font-medium ${selectedTag === "all" ? "bg-savori-orange text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${selectedTag === "all" ? "bg-savori-orange text-white shadow-sm" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
           >
             All
           </button>
@@ -103,7 +146,7 @@ export default function MenuPage() {
               key={tag}
               type="button"
               onClick={() => setSelectedTag(tag)}
-              className={`rounded-full px-3 py-2 text-sm font-medium ${selectedTag === tag ? "bg-savori-orange text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"}`}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold capitalize transition-all ${selectedTag === tag ? "bg-savori-orange text-white shadow-sm" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
             >
               {tag}
             </button>
