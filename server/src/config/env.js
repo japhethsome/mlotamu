@@ -21,4 +21,15 @@ export const env = {
   preferredTimezone: process.env.PREFERRED_TIMEZONE || "UTC",
   mockPayment: process.env.MOCK_PAYMENT !== "false",
   appName: process.env.APP_NAME || "Cafeteria Orders",
+  // M-Pesa Daraja API
+  mpesaConsumerKey: process.env.MPESA_CONSUMER_KEY || "",
+  mpesaConsumerSecret: process.env.MPESA_CONSUMER_SECRET || "",
+  mpesaShortcode: process.env.MPESA_SHORTCODE || "174379",
+  mpesaPasskey:
+    process.env.MPESA_PASSKEY ||
+    "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
+  mpesaCallbackUrl:
+    process.env.MPESA_CALLBACK_URL ||
+    "https://your-backend.onrender.com/api/payments/mpesa/callback",
+  mpesaEnv: process.env.MPESA_ENV || "sandbox",
 };

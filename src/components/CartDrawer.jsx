@@ -24,13 +24,22 @@ export default function CartDrawer() {
   return (
     <AnimatePresence>
       {open ? (
-        <motion.aside
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-        >
+        <>
+          {/* Backdrop overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+          />
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
           <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
             <div className="flex items-center gap-2 font-semibold">
               <ShoppingBag size={18} />
@@ -133,6 +142,7 @@ export default function CartDrawer() {
             </div>
           </div>
         </motion.aside>
+      </>
       ) : null}
     </AnimatePresence>
   );

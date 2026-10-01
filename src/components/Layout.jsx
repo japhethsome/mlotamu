@@ -217,28 +217,9 @@ export default function Layout({ children }) {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
-      {/* CartDrawer + mobile FAB — customers only */}
+      {/* CartDrawer — customers only */}
       {!user?.role || user.role === "customer" ? (
-        <>
-          <CartDrawer />
-          <div className="fixed bottom-4 right-4 z-40 md:hidden">
-            <button
-              type="button"
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-savori-orange text-white shadow-xl shadow-savori-orange/40 hover:bg-savori-green hover:shadow-savori-green/40 transition-all transform hover:scale-105"
-              aria-label="Open cart"
-              onClick={() =>
-                document.dispatchEvent(new CustomEvent("toggle-cart-drawer"))
-              }
-            >
-              <ShoppingCart size={24} />
-              {itemCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-savori-green px-1 text-xs font-bold text-white shadow-md">
-                  {itemCount}
-                </span>
-              ) : null}
-            </button>
-          </div>
-        </>
+        <CartDrawer />
       ) : null}
     </div>
   );

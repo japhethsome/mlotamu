@@ -13,6 +13,7 @@ import menuRoutes from "./routes/menu.js";
 import orderRoutes from "./routes/orders.js";
 import staffRoutes from "./routes/staff.js";
 import adminRoutes from "./routes/admin.js";
+import paymentRoutes from "./routes/payments.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 const app = express();
@@ -45,6 +46,7 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // In single-directory deployment, serve built frontend assets if dist/ exists
 const distPath = path.resolve(process.cwd(), "dist");
