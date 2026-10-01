@@ -110,7 +110,7 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5 xl:grid-cols-3">
         {visibleItems.map((item) => {
           const isClosed = !item.isAvailable;
           return (
@@ -122,7 +122,7 @@ export default function MenuPage() {
                   : ""
               }`}
             >
-              <div className="relative h-48 w-full overflow-hidden">
+              <div className="relative h-32 sm:h-40 md:h-48 w-full overflow-hidden">
                 <img
                   src={
                     item.image ||
@@ -144,11 +144,11 @@ export default function MenuPage() {
                   </div>
                 )}
               </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-bold">{item.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base md:text-xl font-bold leading-tight truncate">{item.name}</h3>
+                    <p className="mt-0.5 text-xs sm:text-sm text-slate-500 line-clamp-2 hidden sm:block">
                       {item.description}
                     </p>
                   </div>
@@ -158,9 +158,10 @@ export default function MenuPage() {
                       setLiked((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
                     }
                     aria-label="Add to favourites"
+                    className="shrink-0"
                   >
                     <Heart
-                      size={18}
+                      size={16}
                       className={
                         liked[item.id]
                           ? "fill-red-500 text-red-500"
@@ -170,40 +171,40 @@ export default function MenuPage() {
                   </button>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {(item.dietaryTags || []).map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
+                      className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-amber-700"
                     >
                       {tag}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
-                  <span>
+                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                  <span className="truncate max-w-[70%] hidden sm:block">
                     {item.allergens?.length
                       ? `Allergens: ${item.allergens.join(", ")}`
                       : "No major allergens"}
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                  <span className="inline-flex items-center gap-1 ml-auto">
+                    <Star size={12} className="fill-yellow-400 text-yellow-400" />
                     4.8
                   </span>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xl font-bold">
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base sm:text-xl font-bold truncate">
                       KSh {Number(item.price).toFixed(2)}
                     </p>
                     <p
-                      className={`text-xs font-bold ${
+                      className={`text-[10px] sm:text-xs font-bold ${
                         item.isAvailable ? "text-emerald-600" : "text-rose-600"
                       }`}
                     >
-                      {item.isAvailable ? "● Open & In Stock" : "● Closed"}
+                      {item.isAvailable ? "● Open" : "● Closed"}
                     </p>
                   </div>
 
@@ -221,13 +222,13 @@ export default function MenuPage() {
                       })
                     }
                     disabled={!item.isAvailable}
-                    className={`rounded-2xl px-5 py-2.5 text-sm font-bold transition-all ${
+                    className={`shrink-0 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold transition-all ${
                       item.isAvailable
                         ? "btn-primary"
                         : "cursor-not-allowed border border-rose-300 bg-rose-100 text-rose-700 shadow-none dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-400"
                     }`}
                   >
-                    {item.isAvailable ? "Add to cart" : "Closed"}
+                    {item.isAvailable ? "Add" : "Closed"}
                   </button>
                 </div>
               </div>

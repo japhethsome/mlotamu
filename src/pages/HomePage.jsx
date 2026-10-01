@@ -69,7 +69,7 @@ export default function HomePage() {
         </p>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-3">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5 md:grid-cols-3">
         {mealCards.map(
           ({ key, label, icon: Icon, hours, description, open, items }) => (
             <Link
