@@ -100,7 +100,16 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Error */}
+          {/* Forgot password */}
+          <div className="text-right -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-savori-orange hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {error && (
             <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-600 dark:bg-rose-950/40 dark:border-rose-900">
               {error}

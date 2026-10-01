@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   Clock,
   CheckCircle2,
@@ -22,6 +23,10 @@ import {
   Camera,
   CameraOff,
   SwitchCamera,
+  Plus,
+  Trash2,
+  Image as ImageIcon,
+  ClipboardList,
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -52,6 +57,16 @@ const MEAL_CATEGORIES = [
   },
 ];
 
+const PRESET_DISH_IMAGES = [
+  { label: "🍚 Rice", url: "https://images.unsplash.com/photo-1536304993881-ff86e0c9ef97?auto=format&fit=crop&w=900&q=80" },
+  { label: "🫓 Chapati", url: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=80" },
+  { label: "🥟 Ndazi", url: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=900&q=80" },
+  { label: "☕ Hot Tea", url: "https://images.unsplash.com/photo-1510627489930-0c1b0bfb6785?auto=format&fit=crop&w=900&q=80" },
+  { label: "🥩 Stew / Beef", url: "https://images.unsplash.com/photo-1547928576-a4a33237cbc3?auto=format&fit=crop&w=900&q=80" },
+  { label: "🥗 Veggies / Sukuma", url: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=900&q=80" },
+  { label: "🍛 Beans / Githeri", url: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=80" },
+];
+
 export default function StaffDashboardPage() {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState("orders"); // "orders", "meals", "scanner", "inventory"
@@ -72,15 +87,23 @@ export default function StaffDashboardPage() {
   const [cameraFacing, setCameraFacing] = useState("environment");
   const html5QrCodeRef = useRef(null);
 
-  // Edit Meal Modal state
+  // Add / Edit Meal Modal state
   const [editingMeal, setEditingMeal] = useState(null);
+  const [isAddingMeal, setIsAddingMeal] = useState(false);
+  const [mealCategoryFilter, setMealCategoryFilter] = useState("all");
+  const [mealSearchQuery, setMealSearchQuery] = useState("");
   const [mealForm, setMealForm] = useState({
     name: "",
+    description: "",
     price: "",
-    stockQuantity: "",
+    category: "lunch",
+    image: "",
+    stockQuantity: "50",
     isAvailable: true,
-    startTime: "06:00",
-    endTime: "09:00",
+    startTime: "11:00",
+    endTime: "14:00",
+    dietaryTags: "",
+    allergens: "",
   });
 
   const fetchData = async () => {
@@ -106,6 +129,23 @@ export default function StaffDashboardPage() {
     const interval = setInterval(fetchData, 15000); // Poll every 15s for live cafeteria updates
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    const handleOpenAddMeal = () => {
+      setActiveTab("inventory");
+      openAddModal();
+    };
+    window.addEventListener("open-add-meal-modal", handleOpenAddMeal);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("action") === "add-meal") {
+      setActiveTab("inventory");
+      openAddModal();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    return () => window.removeEventListener("open-add-meal-modal", handleOpenAddMeal);
+  }, []);
 
   // Update order status
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -192,90 +232,112 @@ export default function StaffDashboardPage() {
     }
   };
 
-  // Open Edit Meal Modal
-  const openEditModal = (meal) => {
-    setEditingMeal(meal);
+  // Open Add Meal Modal
+  const openAddModal = () => {
+    setIsAddingMeal(true);
+    setEditingMeal(null);
     setMealForm({
-      name: meal.name,
-      price: meal.price,
-      stockQuantity: meal.stock_quantity ?? meal.stockQuantity ?? 0,
-      isAvailable: meal.isAvailable,
-      startTime: meal.servingHours?.start || "06:00",
-      endTime: meal.servingHours?.end || "20:00",
+      name: "",
+      description: "",
+      price: "",
+      category: "lunch",
+      image: "",
+      stockQuantity: "50",
+      isAvailable: true,
+      startTime: "11:00",
+      endTime: "14:00",
+      dietaryTags: "",
+      allergens: "",
     });
   };
 
-  // Save Meal Edit
+  // Open Edit Meal Modal
+  const openEditModal = (meal) => {
+    setIsAddingMeal(false);
+    setEditingMeal(meal);
+    setMealForm({
+      name: meal.name || "",
+      description: meal.description || "",
+      price: String(meal.price ?? ""),
+      category: meal.category || "lunch",
+      image: meal.image || "",
+      stockQuantity: String(meal.stock_quantity ?? meal.stockQuantity ?? 50),
+      isAvailable: meal.isAvailable !== false,
+      startTime: meal.servingHours?.start || "06:00",
+      endTime: meal.servingHours?.end || "20:00",
+      dietaryTags: Array.isArray(meal.dietaryTags) ? meal.dietaryTags.join(", ") : "",
+      allergens: Array.isArray(meal.allergens) ? meal.allergens.join(", ") : "",
+    });
+  };
+
+  // Delete Meal from Menu
+  const handleDeleteMeal = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.name}" from the menu? Customers will no longer be able to view or order this dish.`)) {
+      return;
+    }
+    try {
+      await apiRequest(`/menu/${item.id}`, { method: "DELETE" }, token);
+      setMenuItems((prev) => prev.filter((m) => m.id !== item.id));
+      alert(`"${item.name}" was successfully removed from the menu.`);
+    } catch (err) {
+      alert(err.message || "Failed to delete meal.");
+    }
+  };
+
+  // Save Meal (Add new or Update existing)
   const handleSaveMeal = async (e) => {
     e.preventDefault();
-    if (!editingMeal) return;
+    if (!mealForm.name.trim()) {
+      alert("Please enter a meal name.");
+      return;
+    }
+    const priceNum = Number(mealForm.price);
+    if (!priceNum || priceNum <= 0) {
+      alert("Please enter a valid price greater than 0.");
+      return;
+    }
+
+    const payload = {
+      name: mealForm.name.trim(),
+      description: mealForm.description.trim() || `${mealForm.name.trim()} prepared fresh at Savori cafeteria.`,
+      price: priceNum,
+      category: mealForm.category,
+      image: mealForm.image.trim() || "/logo.png",
+      stockQuantity: Number(mealForm.stockQuantity || 0),
+      isAvailable: !!mealForm.isAvailable,
+      servingHours: {
+        start: mealForm.startTime || "06:00",
+        end: mealForm.endTime || "20:00",
+      },
+      dietaryTags: mealForm.dietaryTags
+        ? mealForm.dietaryTags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+      allergens: mealForm.allergens
+        ? mealForm.allergens.split(",").map((a) => a.trim()).filter(Boolean)
+        : [],
+    };
 
     try {
-      // Update Price if changed
-      if (Number(mealForm.price) !== Number(editingMeal.price)) {
-        await apiRequest(
-          `/menu/${editingMeal.id}/price`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({
-              newPrice: Number(mealForm.price),
-              reason: "Staff dashboard adjustment",
-            }),
-          },
-          token,
-        );
+      if (isAddingMeal) {
+        const created = await apiRequest("/menu", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }, token);
+        setMenuItems((prev) => [...prev, created]);
+        alert(`"${created.name}" has been added to the menu!`);
+      } else if (editingMeal) {
+        const updated = await apiRequest(`/menu/${editingMeal.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }, token);
+        setMenuItems((prev) => prev.map((m) => (m.id === editingMeal.id ? updated : m)));
+        alert(`"${updated.name}" has been updated successfully!`);
       }
 
-      // Update Serving Hours
-      await apiRequest(
-        `/menu/${editingMeal.id}/serving-hours`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            start: mealForm.startTime,
-            end: mealForm.endTime,
-          }),
-        },
-        token,
-      );
-
-      // Update Stock
-      await apiRequest(
-        `/menu/${editingMeal.id}/stock`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ stockQuantity: Number(mealForm.stockQuantity) }),
-        },
-        token,
-      );
-
-      // Update Availability
-      await apiRequest(
-        `/menu/${editingMeal.id}/availability`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ isAvailable: mealForm.isAvailable }),
-        },
-        token,
-      );
-
-      setMenuItems((prev) =>
-        prev.map((m) =>
-          m.id === editingMeal.id
-            ? {
-                ...m,
-                price: Number(mealForm.price),
-                stock_quantity: Number(mealForm.stockQuantity),
-                isAvailable: mealForm.isAvailable,
-                servingHours: { start: mealForm.startTime, end: mealForm.endTime },
-              }
-            : m,
-        ),
-      );
-
       setEditingMeal(null);
+      setIsAddingMeal(false);
     } catch (err) {
-      alert(err.message || "Failed to update meal.");
+      alert(err.message || "Failed to save meal item.");
     }
   };
 
@@ -453,6 +515,23 @@ export default function StaffDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => {
+                setActiveTab("inventory");
+                openAddModal();
+              }}
+              className="flex items-center gap-1.5 rounded-xl bg-savori-orange px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-savori-orange/30 hover:bg-savori-green hover:shadow-savori-green/30 transition-all transform active:scale-95"
+              id="top-add-meal-btn"
+            >
+              <Plus size={15} /> + Add Meal to Menu
+            </button>
+            <Link
+              to="/staff/summary"
+              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:from-amber-700 hover:to-orange-700 transition-all"
+            >
+              <ClipboardList size={14} /> Kitchen Prep Summary
+            </Link>
+            <button
+              type="button"
               onClick={fetchData}
               disabled={refreshing}
               className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -523,56 +602,71 @@ export default function StaffDashboardPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("orders")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "orders"
-              ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Layers size={16} /> Live Orders Queue
-          <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
-            {orders.filter((o) => o.status !== "collected" && o.status !== "cancelled").length}
-          </span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("orders")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "orders"
+                ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Layers size={16} /> Live Orders Queue
+            <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+              {orders.filter((o) => o.status !== "collected" && o.status !== "cancelled").length}
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("meals")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "meals"
-              ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Clock size={16} /> Meal Service Windows & Availability
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("meals")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "meals"
+                ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Clock size={16} /> Meal Service Windows & Availability
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("scanner")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "scanner"
-              ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          }`}
-        >
-          <QrCode size={16} /> QR Camera Scanner
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("scanner")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "scanner"
+                ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            <QrCode size={16} /> QR Camera Scanner
+          </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab("inventory")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "inventory"
+                ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Package size={16} /> Menu & Meal Catalog
+          </button>
+        </div>
+
+        {/* Dedicated Add Meal Button in Tab Bar */}
         <button
           type="button"
-          onClick={() => setActiveTab("inventory")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "inventory"
-              ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
-              : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          }`}
+          onClick={() => {
+            setActiveTab("inventory");
+            openAddModal();
+          }}
+          className="flex items-center gap-2 rounded-xl bg-savori-orange px-4 py-2 text-xs sm:text-sm font-black text-white shadow-md shadow-savori-orange/30 hover:bg-savori-green hover:shadow-savori-green/30 transition-all transform active:scale-95 ml-auto"
+          id="tab-bar-add-meal-btn"
         >
-          <Package size={16} /> Menu & Price Editor
+          <Plus size={16} /> + Add Meal to Menu
         </button>
       </div>
 
@@ -1075,144 +1169,426 @@ export default function StaffDashboardPage() {
 
       {/* TAB 4: MENU, STOCK & PRICE EDITOR */}
       {activeTab === "inventory" ? (
-        <div className="card-surface p-6 border border-slate-200/80 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
+        <div className="card-surface p-6 border border-slate-200/80 dark:border-slate-800 space-y-6">
+          {/* Header & Add Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                Menu Items, Serving Times & Stock Management
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <UtensilsCrossed className="text-savori-orange" size={24} />
+                Menu Catalog & Meal Management
               </h2>
-              <p className="text-xs text-slate-500">
-                Quickly adjust prices (KSh), stock counts, serving windows, or toggle items on/off.
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Add new meals to the customer menu, edit dishes, adjust prices, or remove discontinued meals.
               </p>
+            </div>
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="flex items-center justify-center gap-2 rounded-xl bg-savori-orange px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-savori-orange/30 hover:bg-savori-green hover:shadow-savori-green/30 transition-all transform active:scale-95 shrink-0"
+            >
+              <Plus size={18} />
+              + Add New Meal to Menu
+            </button>
+          </div>
+
+          {/* Filter Bar: Search & Category Pills */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Category Pills */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "all", label: "All Items" },
+                { key: "breakfast", label: "Breakfast" },
+                { key: "lunch", label: "Lunch" },
+                { key: "dinner", label: "Dinner" },
+                { key: "supper", label: "Supper" },
+              ].map((cat) => {
+                const count = cat.key === "all" 
+                  ? menuItems.length 
+                  : menuItems.filter((m) => m.category === cat.key).length;
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setMealCategoryFilter(cat.key)}
+                    className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                      mealCategoryFilter === cat.key
+                        ? "bg-savori-brown text-white shadow-sm dark:bg-savori-orange"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    <span>{cat.label}</span>
+                    <span className="rounded-full bg-white/20 dark:bg-black/20 px-1.5 py-0.2 text-[10px]">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative md:w-72">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                type="text"
+                value={mealSearchQuery}
+                onChange={(e) => setMealSearchQuery(e.target.value)}
+                placeholder="Search dishes by name or ingredient..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs outline-none focus:border-savori-orange focus:ring-2 focus:ring-savori-orange/20 dark:border-slate-700 dark:bg-slate-800"
+              />
+              {mealSearchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setMealSearchQuery("")}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              ) : null}
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Menu Items Table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-800">
+              <thead className="border-b border-slate-200 bg-slate-50/80 text-xs uppercase font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
                 <tr>
-                  <th className="py-3 px-4">Item</th>
+                  <th className="py-3 px-4">Dish</th>
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Serving Window</th>
-                  <th className="py-3 px-4">Price (KSh)</th>
+                  <th className="py-3 px-4">Price</th>
                   <th className="py-3 px-4">Stock</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {menuItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={item.image || "/logo.png"}
-                          alt={item.name}
-                          className="h-10 w-10 rounded-xl object-cover border"
-                        />
-                        <span className="font-bold text-slate-900 dark:text-slate-100">{item.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 capitalize font-semibold text-slate-600 dark:text-slate-400">
-                      {item.category}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-xs">
-                      {item.servingHours?.start || "06:00"} - {item.servingHours?.end || "20:00"}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-savori-brown dark:text-savori-cream">
-                      KSh {Number(item.price).toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`font-semibold ${
-                          (item.stock_quantity ?? item.stockQuantity ?? 0) < 10
-                            ? "text-rose-600 dark:text-rose-400 font-bold"
-                            : "text-slate-700 dark:text-slate-300"
-                        }`}
-                      >
-                        {item.stock_quantity ?? item.stockQuantity ?? 0}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleItemAvailability(item)}
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          item.isAvailable
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                            : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                        }`}
-                      >
-                        {item.isAvailable ? "Available" : "Sold Out"}
-                      </button>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(item)}
-                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {menuItems
+                  .filter((item) => {
+                    const matchesCategory =
+                      mealCategoryFilter === "all"
+                        ? true
+                        : item.category === mealCategoryFilter ||
+                          (mealCategoryFilter === "dinner" && item.category === "supper");
+                    const matchesSearch =
+                      !mealSearchQuery ||
+                      item.name?.toLowerCase().includes(mealSearchQuery.toLowerCase()) ||
+                      item.description?.toLowerCase().includes(mealSearchQuery.toLowerCase());
+                    return matchesCategory && matchesSearch;
+                  })
+                  .map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={item.image || "/logo.png"}
+                            alt={item.name}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = "/logo.png";
+                            }}
+                            className="h-11 w-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                              {item.name}
+                            </span>
+                            {item.description ? (
+                              <span className="text-[11px] text-slate-400 line-clamp-1 max-w-xs">
+                                {item.description}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-block rounded-lg px-2.5 py-1 text-xs font-extrabold capitalize ${
+                            item.category === "breakfast"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300"
+                              : item.category === "lunch"
+                              ? "bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300"
+                              : item.category === "dinner"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300"
+                              : "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300"
+                          }`}
+                        >
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-slate-400">
+                        {item.servingHours?.start || "06:00"} - {item.servingHours?.end || "20:00"}
+                      </td>
+                      <td className="py-3 px-4 font-black text-savori-brown dark:text-savori-cream whitespace-nowrap">
+                        KSh {Number(item.price).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`font-bold ${
+                            (item.stock_quantity ?? item.stockQuantity ?? 0) <= 5
+                              ? "text-rose-600 dark:text-rose-400"
+                              : (item.stock_quantity ?? item.stockQuantity ?? 0) <= 15
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {item.stock_quantity ?? item.stockQuantity ?? 0}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleItemAvailability(item)}
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold transition-transform active:scale-95 ${
+                            item.isAvailable
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300"
+                              : "bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-300"
+                          }`}
+                        >
+                          {item.isAvailable ? "Available" : "Sold Out"}
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(item)}
+                            className="flex items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-savori-brown dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                            title="Edit meal"
+                          >
+                            <Edit3 size={13} />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMeal(item)}
+                            className="flex items-center gap-1 rounded-xl border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/40 transition-colors"
+                            title="Delete meal"
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
+
+            {/* Empty filter result */}
+            {menuItems.filter((item) => {
+              const matchesCategory =
+                mealCategoryFilter === "all"
+                  ? true
+                  : item.category === mealCategoryFilter ||
+                    (mealCategoryFilter === "dinner" && item.category === "supper");
+              const matchesSearch =
+                !mealSearchQuery ||
+                item.name?.toLowerCase().includes(mealSearchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(mealSearchQuery.toLowerCase());
+              return matchesCategory && matchesSearch;
+            }).length === 0 ? (
+              <div className="p-10 text-center text-slate-400">
+                <UtensilsCrossed size={36} className="mx-auto mb-2 opacity-50" />
+                <p className="font-bold text-slate-600 dark:text-slate-300">No dishes found</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Try adjusting your search query or click "+ Add New Meal to Menu" above to add this dish.
+                </p>
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-savori-orange px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-savori-green transition-colors"
+                >
+                  <Plus size={14} /> Add New Meal
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
 
-      {/* EDIT MEAL MODAL */}
-      {editingMeal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="card-surface w-full max-w-lg p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative animate-in fade-in zoom-in-95">
+      {/* ADD / EDIT MEAL MODAL */}
+      {(editingMeal || isAddingMeal) ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="card-surface w-full max-w-xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative animate-in fade-in zoom-in-95 my-8">
             <button
               type="button"
-              onClick={() => setEditingMeal(null)}
-              className="absolute right-4 top-4 rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              onClick={() => {
+                setEditingMeal(null);
+                setIsAddingMeal(false);
+              }}
+              className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
             >
               <X size={20} />
             </button>
 
-            <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 mb-1">
-              Edit {editingMeal.name}
-            </h3>
-            <p className="text-xs text-slate-500 mb-5">
-              Category: <span className="capitalize font-bold">{editingMeal.category}</span>
-            </p>
+            <div className="mb-4">
+              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                {isAddingMeal ? (
+                  <>
+                    <Plus className="text-savori-orange" size={22} />
+                    Add New Meal to Menu
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="text-savori-orange" size={22} />
+                    Edit Meal: {editingMeal.name}
+                  </>
+                )}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {isAddingMeal
+                  ? "Enter the dish details below. Placeholders provide examples for each field."
+                  : `Update pricing, descriptions, serving hours, or image for this dish.`}
+              </p>
+            </div>
 
             <form onSubmit={handleSaveMeal} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 1: Name & Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Price (KSh)
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Meal / Dish Name *
                   </label>
                   <input
-                    type="number"
-                    value={mealForm.price}
-                    onChange={(e) => setMealForm({ ...mealForm, price: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none"
+                    type="text"
+                    value={mealForm.name}
+                    onChange={(e) => setMealForm({ ...mealForm, name: e.target.value })}
+                    placeholder="e.g. Traditional Ugali & Sukuma Wiki"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30 font-medium"
                     required
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Stock Quantity
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Meal Category *
+                  </label>
+                  <select
+                    value={mealForm.category}
+                    onChange={(e) => {
+                      const newCat = e.target.value;
+                      let start = "11:00", end = "14:00";
+                      if (newCat === "breakfast") { start = "06:00"; end = "09:00"; }
+                      else if (newCat === "lunch") { start = "11:00"; end = "14:00"; }
+                      else if (newCat === "dinner") { start = "16:00"; end = "20:00"; }
+                      else if (newCat === "supper") { start = "20:00"; end = "23:00"; }
+                      setMealForm({
+                        ...mealForm,
+                        category: newCat,
+                        startTime: start,
+                        endTime: end,
+                      });
+                    }}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30 font-semibold"
+                  >
+                    <option value="breakfast">Breakfast (06:00 – 09:00)</option>
+                    <option value="lunch">Lunch (11:00 – 14:00)</option>
+                    <option value="dinner">Dinner (16:00 – 20:00)</option>
+                    <option value="supper">Supper (Late Night)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Price & Stock */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Price (KSh) *
                   </label>
                   <input
                     type="number"
+                    min="1"
+                    step="1"
+                    value={mealForm.price}
+                    onChange={(e) => setMealForm({ ...mealForm, price: e.target.value })}
+                    placeholder="e.g. 150"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30 font-mono font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Stock Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
                     value={mealForm.stockQuantity}
                     onChange={(e) => setMealForm({ ...mealForm, stockQuantity: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none"
+                    placeholder="e.g. 50"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30 font-mono font-bold"
                     required
                   />
                 </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Serving Window Hours (24H format)
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Dish Description & Ingredients
+                </label>
+                <textarea
+                  rows={2}
+                  value={mealForm.description}
+                  onChange={(e) => setMealForm({ ...mealForm, description: e.target.value })}
+                  placeholder="e.g. Freshly stone-ground maize flour ugali accompanied by sautéed collard greens, sweet onions, and house spices."
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30"
+                />
+              </div>
+
+              {/* Image URL & Preset Selection */}
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Meal Image (URL or relative path)
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={mealForm.image}
+                    onChange={(e) => setMealForm({ ...mealForm, image: e.target.value })}
+                    placeholder="e.g. https://images.unsplash.com/... (or pick a preset below)"
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-mono dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange/30"
+                  />
+                  {mealForm.image ? (
+                    <img
+                      src={mealForm.image}
+                      alt="Preview"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/logo.png";
+                      }}
+                      className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                    />
+                  ) : null}
+                </div>
+
+                {/* Quick Presets */}
+                <div className="mt-2">
+                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">
+                    Quick image presets (click to apply photo):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_DISH_IMAGES.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setMealForm({ ...mealForm, image: preset.url })}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
+                          mealForm.image === preset.url
+                            ? "border-savori-orange bg-orange-50 text-savori-orange dark:bg-orange-950/60"
+                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Serving Window Hours */}
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Serving Window Hours (24-Hour format)
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1221,7 +1597,7 @@ export default function StaffDashboardPage() {
                       type="time"
                       value={mealForm.startTime}
                       onChange={(e) => setMealForm({ ...mealForm, startTime: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none font-mono"
                       required
                     />
                   </div>
@@ -1231,14 +1607,43 @@ export default function StaffDashboardPage() {
                       type="time"
                       value={mealForm.endTime}
                       onChange={(e) => setMealForm({ ...mealForm, endTime: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none font-mono"
                       required
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              {/* Tags & Allergens */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Dietary Tags
+                  </label>
+                  <input
+                    type="text"
+                    value={mealForm.dietaryTags}
+                    onChange={(e) => setMealForm({ ...mealForm, dietaryTags: e.target.value })}
+                    placeholder="e.g. Vegetarian, Halal, Gluten-Free"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Allergens
+                  </label>
+                  <input
+                    type="text"
+                    value={mealForm.allergens}
+                    onChange={(e) => setMealForm({ ...mealForm, allergens: e.target.value })}
+                    placeholder="e.g. Dairy, Gluten, Nuts"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Availability Checkbox */}
+              <div className="flex items-center gap-2.5 pt-1">
                 <input
                   type="checkbox"
                   id="mealAvailableCheck"
@@ -1246,24 +1651,28 @@ export default function StaffDashboardPage() {
                   onChange={(e) => setMealForm({ ...mealForm, isAvailable: e.target.checked })}
                   className="h-4 w-4 rounded border-slate-300 text-savori-orange focus:ring-savori-orange"
                 />
-                <label htmlFor="mealAvailableCheck" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  Dish is actively available for ordering
+                <label htmlFor="mealAvailableCheck" className="text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer">
+                  Dish is actively available for customer ordering
                 </label>
               </div>
 
-              <div className="flex gap-2 pt-3">
+              {/* Action Buttons */}
+              <div className="flex gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingMeal(null)}
-                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+                  onClick={() => {
+                    setEditingMeal(null);
+                    setIsAddingMeal(false);
+                  }}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-xl bg-savori-orange py-2.5 text-xs font-bold text-white shadow-md hover:bg-savori-green transition-colors"
+                  className="flex-1 rounded-xl bg-savori-orange py-2.5 text-xs font-bold text-white shadow-md hover:bg-savori-green transition-all"
                 >
-                  Save Changes
+                  {isAddingMeal ? "+ Add Meal to Menu" : "Save Changes"}
                 </button>
               </div>
             </form>

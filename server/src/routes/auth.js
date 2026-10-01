@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
@@ -50,9 +50,7 @@ router.post("/register", validate(registerSchema), async (req, res, next) => {
       email.toLowerCase(),
     ]);
     if (existing)
-      return res
-        .status(409)
-        .json({ message: "An account already exists for this email." });
+      return res.status(409).json({ message: "An account already exists for this email." });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await runSql(
@@ -64,7 +62,6 @@ router.post("/register", validate(registerSchema), async (req, res, next) => {
       [result.id],
     );
     const tokens = signTokens(newUser);
-
     res.status(201).json({ user: newUser, ...tokens });
   } catch (error) {
     next(error);
@@ -80,8 +77,7 @@ router.post("/login", validate(loginSchema), async (req, res, next) => {
     if (!user) return res.status(401).json({ message: "Invalid credentials." });
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid)
-      return res.status(401).json({ message: "Invalid credentials." });
+    if (!valid) return res.status(401).json({ message: "Invalid credentials." });
 
     const safeUser = await stripUser(user);
     const tokens = signTokens(safeUser);
@@ -111,9 +107,7 @@ router.post("/refresh", async (req, res) => {
     );
     res.json({ token });
   } catch (error) {
-    return res
-      .status(401)
-      .json({ message: "Refresh token expired or invalid." });
+    return res.status(401).json({ message: "Refresh token expired or invalid." });
   }
 });
 
@@ -136,17 +130,13 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// POST /api/auth/forgot-password
 router.post("/forgot-password", validate(forgotSchema), async (req, res) => {
   const { email } = req.body;
-  const user = await getSql("SELECT id FROM users WHERE email = ?", [
-    email.toLowerCase(),
-  ]);
+  const user = await getSql("SELECT id FROM users WHERE email = ?", [email.toLowerCase()]);
   if (!user) {
-    return res.json({
-      message: "If that email is registered, a reset link has been sent.",
-    });
+    return res.json({ message: "If that email is registered, a reset link has been sent." });
   }
-
   const resetToken = jwt.sign({ email: email.toLowerCase() }, env.jwtSecret, {
     expiresIn: "30m",
   });
@@ -154,6 +144,25 @@ router.post("/forgot-password", validate(forgotSchema), async (req, res) => {
     message: "If that email is registered, a reset link has been sent.",
     resetToken,
   });
+});
+
+// POST /api/auth/reset-password  { token, password }
+router.post("/reset-password", async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password || password.length < 6) {
+    return res.status(400).json({ message: "Token and a new password (min 6 chars) are required." });
+  }
+  try {
+    const payload = jwt.verify(token, env.jwtSecret);
+    const passwordHash = await bcrypt.hash(password, 10);
+    await runSql("UPDATE users SET password_hash = ? WHERE email = ?", [
+      passwordHash,
+      payload.email,
+    ]);
+    res.json({ message: "Password updated successfully. You can now log in." });
+  } catch (err) {
+    return res.status(400).json({ message: "Reset link is invalid or has expired." });
+  }
 });
 
 router.get("/health", (_, res) => res.json({ ok: true }));

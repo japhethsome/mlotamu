@@ -17,14 +17,14 @@ function normalizeMenuItem(row) {
 }
 
 const menuItemSchema = z.object({
-  name: z.string().min(2),
-  description: z.string().min(10),
-  price: z.number().positive(),
-  image: z.string().url().optional().or(z.literal("")),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional().default(""),
+  price: z.coerce.number().positive("Price must be greater than 0"),
+  image: z.string().optional().default(""),
   category: z.enum(["breakfast", "lunch", "dinner", "supper"]),
   dietaryTags: z.array(z.string()).default([]),
   allergens: z.array(z.string()).default([]),
-  stockQuantity: z.number().int().min(0),
+  stockQuantity: z.coerce.number().int().min(0).default(50),
   isAvailable: z.boolean().default(true),
   servingHours: z
     .object({ start: z.string(), end: z.string() })
@@ -34,7 +34,7 @@ const menuItemSchema = z.object({
 router.get("/", async (req, res, next) => {
   try {
     const { category, tag, q } = req.query;
-    let sql = "SELECT * FROM menu_items WHERE 1 = 1";
+    let sql = "SELECT * FROM menu_items WHERE (is_deleted = 0 OR is_deleted IS NULL)";
     const params = [];
 
     if (category) {
@@ -85,19 +85,19 @@ router.post(
     try {
       const payload = req.body;
       const item = await runSql(
-        `INSERT INTO menu_items (name, description, price, image, category, dietary_tags, allergens, stock_quantity, is_available, serving_hours)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        `INSERT INTO menu_items (name, description, price, image, category, dietary_tags, allergens, stock_quantity, is_available, serving_hours, is_deleted)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);`,
         [
-          payload.name,
-          payload.description,
+          payload.name.trim(),
+          payload.description?.trim() || "",
           Number(payload.price),
-          payload.image || "",
+          payload.image?.trim() || "/logo.png",
           payload.category,
-          JSON.stringify(payload.dietaryTags),
-          JSON.stringify(payload.allergens),
-          Number(payload.stockQuantity),
+          JSON.stringify(payload.dietaryTags || []),
+          JSON.stringify(payload.allergens || []),
+          Number(payload.stockQuantity ?? 50),
           payload.isAvailable ? 1 : 0,
-          JSON.stringify(payload.servingHours),
+          JSON.stringify(payload.servingHours || { start: "06:00", end: "21:00" }),
         ],
       );
 
@@ -168,19 +168,31 @@ router.put(
   async (req, res, next) => {
     try {
       const payload = req.body;
+      const existing = await getSql("SELECT * FROM menu_items WHERE id = ?", [req.params.id]);
+      if (!existing) {
+        return res.status(404).json({ message: "Menu item not found." });
+      }
+
+      if (Number(existing.price) !== Number(payload.price)) {
+        await runSql(
+          "INSERT INTO price_change_history (menu_item_id, changed_by_user_id, old_price, new_price, reason) VALUES (?, ?, ?, ?, ?)",
+          [req.params.id, req.user.id, existing.price, Number(payload.price), "Menu editor modification"],
+        ).catch(() => {});
+      }
+
       await runSql(
         `UPDATE menu_items SET name = ?, description = ?, price = ?, image = ?, category = ?, dietary_tags = ?, allergens = ?, stock_quantity = ?, is_available = ?, serving_hours = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;`,
         [
-          payload.name,
-          payload.description,
+          payload.name.trim(),
+          payload.description?.trim() || "",
           Number(payload.price),
-          payload.image || "",
+          payload.image?.trim() || existing.image || "/logo.png",
           payload.category,
-          JSON.stringify(payload.dietaryTags),
-          JSON.stringify(payload.allergens),
-          Number(payload.stockQuantity),
+          JSON.stringify(payload.dietaryTags || []),
+          JSON.stringify(payload.allergens || []),
+          Number(payload.stockQuantity ?? 0),
           payload.isAvailable ? 1 : 0,
-          JSON.stringify(payload.servingHours),
+          JSON.stringify(payload.servingHours || { start: "06:00", end: "21:00" }),
           req.params.id,
         ],
       );
@@ -303,10 +315,25 @@ router.delete(
   authorize("staff", "admin"),
   async (req, res, next) => {
     try {
-      await runSql("UPDATE menu_items SET is_available = 0 WHERE id = ?", [
+      const item = await getSql("SELECT * FROM menu_items WHERE id = ?", [
         req.params.id,
       ]);
-      res.json({ message: "Menu item marked unavailable." });
+      if (!item) {
+        return res.status(404).json({ message: "Menu item not found." });
+      }
+
+      const inOrders = await getSql("SELECT 1 FROM order_items WHERE menu_item_id = ? LIMIT 1", [
+        req.params.id,
+      ]);
+      if (inOrders) {
+        await runSql("UPDATE menu_items SET is_deleted = 1, is_available = 0 WHERE id = ?", [
+          req.params.id,
+        ]);
+      } else {
+        await runSql("DELETE FROM price_change_history WHERE menu_item_id = ?", [req.params.id]).catch(() => {});
+        await runSql("DELETE FROM menu_items WHERE id = ?", [req.params.id]);
+      }
+      res.json({ message: "Menu item deleted successfully." });
     } catch (error) {
       next(error);
     }

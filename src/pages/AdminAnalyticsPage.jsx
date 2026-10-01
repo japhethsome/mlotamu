@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -31,6 +32,13 @@ import {
   FileText,
   Utensils,
   ChevronDown,
+  ChefHat,
+  ClipboardList,
+  QrCode,
+  ChevronRight,
+  Activity,
+  Layers,
+  Menu as MenuIcon,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
@@ -285,95 +293,234 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
-      {/* Top KPI Metric Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-            <span>Total Revenue</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-              <DollarSign size={16} />
+      {/* Admin Executive Layout: Left Sidebar + Right Main Content */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* LEFT SIDEBAR */}
+        <aside className="w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-20 space-y-4">
+          <div className="card-surface p-4 border border-slate-200/80 dark:border-slate-800 shadow-xl rounded-3xl space-y-5">
+            {/* Admin identity badge */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-savori-brown/10 via-savori-orange/10 to-amber-500/10 border border-savori-orange/20 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-savori-brown to-amber-900 flex items-center justify-center text-white shadow-md shrink-0">
+                <Shield size={20} className="text-savori-orange" />
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-[10px] font-black uppercase tracking-wider text-savori-orange">Executive Console</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">Administrator Portal</p>
+              </div>
+            </div>
+
+            {/* Sidebar Navigation Items */}
+            <div className="space-y-1">
+              <p className="px-3 pt-1 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Administrative Views
+              </p>
+              {[
+                { key: "overview", label: "Financial Analytics", icon: TrendingUp, badge: null },
+                { key: "menu", label: "Menu & Dish Catalog", icon: Utensils, badge: inventory.length },
+                { key: "orders", label: "All Orders & Receipts", icon: ShoppingBag, badge: orders.length },
+                { key: "users", label: "User Roles & Access", icon: Users, badge: users.length },
+                { key: "audit", label: "Price Audit Logs", icon: FileText, badge: auditLogs.priceLogs?.length || 0 },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isSelected = activeTab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setActiveTab(item.key)}
+                    className={`w-full flex items-center justify-between gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left group ${
+                      isSelected
+                        ? "bg-gradient-to-r from-savori-orange to-amber-600 text-white shadow-lg shadow-savori-orange/30 translate-x-1"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <Icon size={17} className={isSelected ? "text-white" : "text-slate-400 group-hover:text-savori-orange"} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge !== null ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
+                          isSelected
+                            ? "bg-white/25 text-white"
+                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    ) : (
+                      <ChevronRight
+                        size={14}
+                        className={`transition-opacity shrink-0 ${
+                          isSelected ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100 text-slate-400"
+                        }`}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Actions inside Sidebar */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <p className="px-3 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Quick Actions
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("menu");
+                  setIsAddMealOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-savori-orange py-2.5 px-3 text-xs font-black text-white shadow-md shadow-savori-orange/30 hover:bg-savori-green hover:shadow-savori-green/30 transition-all transform active:scale-95"
+              >
+                <Plus size={15} /> + Add New Meal
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-colors"
+              >
+                <Download size={14} /> Export CSV Report
+              </button>
+            </div>
+
+            {/* Operational Portals */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
+              <p className="px-3 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Staff Portals
+              </p>
+              <Link
+                to="/staff"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ChefHat size={15} className="text-amber-500" />
+                  <span>Kitchen Hub</span>
+                </div>
+                <span className="text-[10px] text-slate-400 group-hover:text-savori-orange">&rarr;</span>
+              </Link>
+              <Link
+                to="/staff/summary"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ClipboardList size={15} className="text-orange-500" />
+                  <span>Prep Summary</span>
+                </div>
+                <span className="text-[10px] text-slate-400 group-hover:text-savori-orange">&rarr;</span>
+              </Link>
+              <Link
+                to="/scan"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <QrCode size={15} className="text-emerald-500" />
+                  <span>QR Scanner</span>
+                </div>
+                <span className="text-[10px] text-slate-400 group-hover:text-savori-orange">&rarr;</span>
+              </Link>
+            </div>
+
+            {/* Status indicator */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 px-2 text-[11px] text-slate-500 font-medium">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>POS & DB Active</span>
             </div>
           </div>
-          <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
-            KSh {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </h3>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-            <TrendingUp size={13} /> Active financial transactions
-          </p>
-        </div>
+        </aside>
 
-        <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-            <span>Total Orders</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
-              <ShoppingBag size={16} />
+        {/* RIGHT MAIN CONTENT */}
+        <main className="flex-1 w-full min-w-0 space-y-6">
+          {/* Top KPI Metric Cards */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span>Total Revenue</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                  <DollarSign size={16} />
+                </div>
+              </div>
+              <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
+                KSh {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </h3>
+              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <TrendingUp size={13} /> Active financial transactions
+              </p>
+            </div>
+
+            <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span>Total Orders</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400">
+                  <ShoppingBag size={16} />
+                </div>
+              </div>
+              <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
+                {totalOrdersCount}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 font-semibold">
+                {activeOrdersCount} in active kitchen fulfillment
+              </p>
+            </div>
+
+            <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span>Average Order Value</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+                  <Sliders size={16} />
+                </div>
+              </div>
+              <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
+                KSh {avgOrderValue.toFixed(0)}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 font-semibold">
+                Per customer cart checkout
+              </p>
+            </div>
+
+            <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span>Registered Users</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400">
+                  <Users size={16} />
+                </div>
+              </div>
+              <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
+                {users.length}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 font-semibold">
+                {users.filter((u) => u.role === "staff").length} Staff • {users.filter((u) => u.role === "admin").length} Admins
+              </p>
             </div>
           </div>
-          <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
-            {totalOrdersCount}
-          </h3>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">
-            {activeOrdersCount} in active kitchen fulfillment
-          </p>
-        </div>
 
-        <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-            <span>Average Order Value</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
-              <Sliders size={16} />
-            </div>
+          {/* Mobile Horizontal Pill Scroller (Visible on small screens) */}
+          <div className="flex lg:hidden overflow-x-auto gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+            {[
+              { key: "overview", label: "Financial Analytics", icon: TrendingUp },
+              { key: "menu", label: "Menu Catalog", icon: Utensils },
+              { key: "orders", label: "All Orders", icon: ShoppingBag },
+              { key: "users", label: "User Roles", icon: Users },
+              { key: "audit", label: "Audit Logs", icon: FileText },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                    activeTab === tab.key
+                      ? "bg-savori-orange text-white shadow-md"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  <Icon size={14} /> {tab.label}
+                </button>
+              );
+            })}
           </div>
-          <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
-            KSh {avgOrderValue.toFixed(0)}
-          </h3>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">
-            Per customer cart checkout
-          </p>
-        </div>
-
-        <div className="card-surface p-5 border border-slate-200/80 dark:border-slate-800 shadow-md">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-            <span>Registered Users</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400">
-              <Users size={16} />
-            </div>
-          </div>
-          <h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">
-            {users.length}
-          </h3>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">
-            {users.filter((u) => u.role === "staff").length} Staff • {users.filter((u) => u.role === "admin").length} Admins
-          </p>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-        {[
-          { key: "overview", label: "Financial Analytics & Charts", icon: TrendingUp },
-          { key: "menu", label: "Menu & Dish Catalog", icon: Utensils },
-          { key: "orders", label: "All Orders & Receipts", icon: ShoppingBag },
-          { key: "users", label: "User Roles & Permissions", icon: Users },
-          { key: "audit", label: "Price Change Audit Logs", icon: FileText },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-                activeTab === tab.key
-                  ? "bg-savori-brown text-white shadow-md dark:bg-savori-orange"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
-            >
-              <Icon size={16} /> {tab.label}
-            </button>
-          );
-        })}
-      </div>
 
       {/* TAB 1: OVERVIEW & ANALYTICS CHARTS */}
       {activeTab === "overview" ? (
@@ -784,6 +931,9 @@ export default function AdminAnalyticsPage() {
           </div>
         </div>
       ) : null}
+          {/* End of Active Tabs */}
+        </main>
+      </div>
 
       {/* ADD MEAL MODAL */}
       {isAddMealOpen ? (

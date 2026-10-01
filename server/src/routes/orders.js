@@ -1,5 +1,5 @@
 import express from "express";
-import { randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import QRCode from "qrcode";
 import { z } from "zod";
 import { allSql, db, getSql, runSql } from "../config/db.js";
@@ -191,8 +191,14 @@ router.post(
         ? `Phone (M-Pesa: ${phoneNumber})`
         : "Phone (M-Pesa)";
 
-      const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
-      const token = randomUUID();
+      // Generate a 6-character alphanumeric reference code (A-Z + 0-9)
+      const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const refCode = Array.from(randomBytes(6))
+        .map((b) => CHARSET[b % CHARSET.length])
+        .join("");
+
+      const orderNumber = `ORD-${refCode}`;
+      const token = refCode; // QR code encodes the 6-digit ref code directly
       const validUntil = new Date(
         Date.now() + 1000 * 60 * 60 * 24 * 7,
       ).toISOString();
@@ -248,7 +254,12 @@ router.post(
       const order = await getSql("SELECT * FROM orders WHERE id = ?", [
         orderInsert.id,
       ]);
-      const qrCodeDataUrl = await QRCode.toDataURL(token);
+      const qrCodeDataUrl = await QRCode.toDataURL(`SAV:${token}`, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 300,
+        color: { dark: "#3d1f0e", light: "#ffffff" },
+      });
       const user = await getSql("SELECT email FROM users WHERE id = ?", [
         req.user.id,
       ]);
@@ -348,7 +359,8 @@ router.post(
           .json({ message: "Verification token or reference code is required." });
       }
 
-      const cleanToken = String(token).trim();
+      // Strip optional "SAV:" prefix from scanned QR codes
+      const cleanToken = String(token).trim().replace(/^SAV:/i, "");
 
       let order = await getSql(
         `SELECT o.*, u.name AS customer_name, u.email AS customer_email

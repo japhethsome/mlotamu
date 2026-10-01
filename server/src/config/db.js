@@ -59,6 +59,7 @@ export function initializeDatabase() {
         allergens TEXT DEFAULT '[]',
         stock_quantity INTEGER NOT NULL DEFAULT 0,
         is_available INTEGER NOT NULL DEFAULT 1,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         serving_hours TEXT DEFAULT '{}',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -147,6 +148,7 @@ export function initializeDatabase() {
 
     db.serialize(() => {
       statements.forEach((sql) => db.run(sql));
+      db.run("ALTER TABLE menu_items ADD COLUMN is_deleted INTEGER DEFAULT 0", () => {});
       db.run("SELECT 1", (err) => {
         if (err) return reject(err);
         resolve();

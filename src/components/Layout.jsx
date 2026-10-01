@@ -52,9 +52,31 @@ export default function Layout({ children }) {
               </>
             ) : null}
             {user?.role === "staff" || user?.role === "admin" ? (
-              <NavLink to="/staff" className={navClasses}>
-                {t("dashboard")}
-              </NavLink>
+              <>
+                <NavLink to="/staff" className={navClasses}>
+                  {t("dashboard")}
+                </NavLink>
+                <NavLink to="/staff/summary" className={navClasses}>
+                  Prep Summary
+                </NavLink>
+                <NavLink to="/scan" className={navClasses}>
+                  Scan QR
+                </NavLink>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.location.pathname !== "/staff") {
+                      window.location.href = "/staff?action=add-meal";
+                    } else {
+                      window.dispatchEvent(new CustomEvent("open-add-meal-modal"));
+                    }
+                  }}
+                  className="rounded-xl bg-savori-orange/15 px-3 py-1.5 text-xs font-black text-savori-orange hover:bg-savori-orange hover:text-white transition-all shadow-sm"
+                  title="Add new meal to menu"
+                >
+                  + Add Meal
+                </button>
+              </>
             ) : null}
             {user?.role === "admin" ? (
               <NavLink to="/admin" className={navClasses}>
