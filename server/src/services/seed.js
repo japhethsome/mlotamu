@@ -1,4 +1,4 @@
-﻿import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { runSql, getSql } from "../config/db.js";
 
 const menuItems = [
@@ -8,7 +8,7 @@ const menuItems = [
     name: "White Tea",
     description: "Fresh brewed white tea, light and calming.",
     price: 10,
-    image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/white-tea.jpg",
     dietary_tags: ["vegan"],
     allergens: [],
     stock_quantity: 200,
@@ -20,7 +20,7 @@ const menuItems = [
     name: "Black Tea",
     description: "Strong brewed black tea, served hot.",
     price: 10,
-    image: "https://images.unsplash.com/photo-1510627489930-0c1b0bfb6785?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/black-tea.jpg",
     dietary_tags: ["vegan"],
     allergens: [],
     stock_quantity: 200,
@@ -32,7 +32,7 @@ const menuItems = [
     name: "Ndazi",
     description: "Freshly fried Swahili doughnuts, soft and lightly sweet.",
     price: 10,
-    image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/ndazi.jpg",
     dietary_tags: ["vegetarian"],
     allergens: ["gluten"],
     stock_quantity: 150,
@@ -44,7 +44,7 @@ const menuItems = [
     name: "Chapati",
     description: "Soft layered flatbread, freshly made.",
     price: 20,
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/chapati.jpg",
     dietary_tags: ["vegetarian"],
     allergens: ["gluten"],
     stock_quantity: 120,
@@ -57,7 +57,7 @@ const menuItems = [
     name: "Rice",
     description: "Plain steamed white rice.",
     price: 20,
-    image: "https://images.unsplash.com/photo-1536304993881-ff86e0c9ef97?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/rice.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 200,
@@ -69,7 +69,7 @@ const menuItems = [
     name: "Ugali",
     description: "Kenyan staple maize meal, firm and filling.",
     price: 20,
-    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/ugali.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 200,
@@ -81,7 +81,7 @@ const menuItems = [
     name: "Vegetable (Kales/Cabbage)",
     description: "Fresh cooked kales or cabbage, lightly seasoned.",
     price: 10,
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/vegetables.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 200,
@@ -93,7 +93,7 @@ const menuItems = [
     name: "Ndengu Stew",
     description: "Creamy green gram stew with spices.",
     price: 20,
-    image: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/ndengu-stew.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 150,
@@ -105,7 +105,7 @@ const menuItems = [
     name: "Beans Stew",
     description: "Hearty slow-cooked bean stew, well-seasoned.",
     price: 20,
-    image: "https://images.unsplash.com/photo-1506484381205-f7945653044d?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/beans-stew.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 150,
@@ -118,7 +118,7 @@ const menuItems = [
     name: "Ugali Mix",
     description: "Ugali served with your choice of stew and vegetables.",
     price: 80,
-    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/ugali.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 100,
@@ -130,7 +130,7 @@ const menuItems = [
     name: "Rice Mix",
     description: "Rice served with stew and vegetables — a complete meal.",
     price: 80,
-    image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/rice-mix.jpg",
     dietary_tags: ["vegan", "gluten-free"],
     allergens: [],
     stock_quantity: 100,
@@ -142,7 +142,7 @@ const menuItems = [
     name: "Chapo Mix",
     description: "Chapati served with stew and vegetables.",
     price: 80,
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/chapo-mix.jpg",
     dietary_tags: ["vegetarian"],
     allergens: ["gluten"],
     stock_quantity: 100,
@@ -155,7 +155,7 @@ const menuItems = [
     name: "Beef Ugali",
     description: "Tender beef stew served with ugali.",
     price: 70,
-    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/beef-stew.jpg",
     dietary_tags: ["halal", "gluten-free"],
     allergens: [],
     stock_quantity: 80,
@@ -167,7 +167,7 @@ const menuItems = [
     name: "Beef Rice",
     description: "Tender beef stew served with steamed rice.",
     price: 70,
-    image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/beef-rice.jpg",
     dietary_tags: ["halal", "gluten-free"],
     allergens: [],
     stock_quantity: 80,
@@ -179,7 +179,7 @@ const menuItems = [
     name: "Beef Chapo",
     description: "Beef stew served with freshly made chapati.",
     price: 80,
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/chapo-mix.jpg",
     dietary_tags: ["halal"],
     allergens: ["gluten"],
     stock_quantity: 80,
@@ -192,7 +192,7 @@ const menuItems = [
     name: "Egg Ugali",
     description: "Fried egg served with ugali.",
     price: 45,
-    image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/egg-ugali.jpg",
     dietary_tags: ["vegetarian", "gluten-free"],
     allergens: ["egg"],
     stock_quantity: 100,
@@ -204,7 +204,7 @@ const menuItems = [
     name: "Egg Ugali Mboga",
     description: "Fried egg with ugali and a side of vegetables.",
     price: 55,
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=80",
+    image: "/foods/egg-ugali.jpg",
     dietary_tags: ["vegetarian", "gluten-free"],
     allergens: ["egg"],
     stock_quantity: 100,
@@ -227,7 +227,7 @@ export async function seedDatabase(force = false) {
     );
   }
 
-  // Always reseed menu so new items take effect
+  // Reseed or update menu so authentic images take effect
   const existingItems = await getSql("SELECT COUNT(*) as count FROM menu_items");
   if (force || !existingItems || existingItems.count === 0) {
     if (force) await runSql("DELETE FROM menu_items");
@@ -248,6 +248,11 @@ export async function seedDatabase(force = false) {
       `INSERT INTO menu_items (name, description, price, image, category, dietary_tags, allergens, stock_quantity, is_available, serving_hours) VALUES ${placeholders};`,
       records.flat(),
     );
+  } else {
+    // Update existing items to use realistic food images
+    for (const item of menuItems) {
+      await runSql(`UPDATE menu_items SET image = ? WHERE name = ?`, [item.image, item.name]);
+    }
   }
 
   await runSql(

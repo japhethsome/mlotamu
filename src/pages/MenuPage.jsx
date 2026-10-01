@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Search, Star, Lock, AlertCircle } from "lucide-react";
+import { Heart, Search, Star, Lock, AlertCircle, Plus } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
+import { getRealisticFoodImage } from "../lib/foodImages.js";
 
 const tags = ["vegetarian", "vegan", "halal", "gluten-free"];
 
@@ -110,101 +111,109 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {visibleItems.map((item) => {
           const isClosed = !item.isAvailable;
+          const itemImage = getRealisticFoodImage(item.name, item.image);
+
           return (
             <div
               key={item.id}
-              className={`card-surface overflow-hidden transition-all ${
+              className={`card-surface group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 transition-all hover:shadow-xl hover:-translate-y-1 ${
                 isClosed
-                  ? "border border-rose-300/40 bg-slate-50/70 opacity-80 dark:border-rose-900/30 dark:bg-slate-900/40"
+                  ? "border-rose-300/40 bg-slate-50/70 opacity-80 dark:border-rose-900/30 dark:bg-slate-900/40"
                   : ""
               }`}
             >
-              <div className="relative h-32 sm:h-40 md:h-48 w-full overflow-hidden">
+              <div className="relative h-32 sm:h-36 md:h-40 lg:h-44 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                 <img
-                  src={
-                    item.image ||
-                    "https://images.unsplash.com/photo-1547592180-85f173990554"
-                  }
+                  src={itemImage}
                   alt={item.name}
-                  className={`h-full w-full object-cover transition-transform duration-300 ${
+                  loading="lazy"
+                  className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                     isClosed ? "grayscale-[60%] brightness-75" : ""
                   }`}
                 />
+
+                {/* Floating Rating Badge */}
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-sm">
+                  <Star size={11} className="fill-amber-400 text-amber-400" />
+                  <span>4.8</span>
+                </div>
+
+                {/* Floating Favorite Button */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLiked((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                  }
+                  aria-label="Add to favourites"
+                  className="absolute top-2 right-2 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/85 dark:bg-slate-900/85 shadow-sm backdrop-blur-sm hover:scale-110 active:scale-95 transition-all"
+                >
+                  <Heart
+                    size={14}
+                    className={
+                      liked[item.id]
+                        ? "fill-rose-500 text-rose-500"
+                        : "text-slate-600 dark:text-slate-300"
+                    }
+                  />
+                </button>
+
                 {isClosed && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                    <div className="flex items-center gap-1.5 rounded-full bg-rose-600 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-lg">
-                      <Lock size={14} /> Closed
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 backdrop-blur-[2px]">
+                    <div className="flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white shadow-lg">
+                      <Lock size={12} /> Closed
                     </div>
-                    <p className="mt-1 text-[11px] font-medium text-white/90">
-                      Not currently available to order
+                    <p className="mt-1 text-[10px] font-medium text-white/90">
+                      Not available
                     </p>
                   </div>
                 )}
               </div>
-              <div className="p-3 sm:p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base md:text-xl font-bold leading-tight truncate">{item.name}</h3>
-                    <p className="mt-0.5 text-xs sm:text-sm text-slate-500 line-clamp-2 hidden sm:block">
-                      {item.description}
-                    </p>
+
+              <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
+                <div>
+                  <div className="flex items-start justify-between gap-1.5">
+                    <h3 className="font-bold text-sm sm:text-base leading-tight truncate text-slate-900 dark:text-slate-100 group-hover:text-savori-orange transition-colors">
+                      {item.name}
+                    </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setLiked((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-                    }
-                    aria-label="Add to favourites"
-                    className="shrink-0"
-                  >
-                    <Heart
-                      size={16}
-                      className={
-                        liked[item.id]
-                          ? "fill-red-500 text-red-500"
-                          : "text-slate-500"
-                      }
-                    />
-                  </button>
+
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1 sm:line-clamp-2">
+                    {item.description}
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                    {(item.dietaryTags || []).slice(0, 2).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-md bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {item.allergens?.length > 0 && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">
+                        • {item.allergens[0]}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(item.dietaryTags || []).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-amber-700"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                  <span className="truncate max-w-[70%] hidden sm:block">
-                    {item.allergens?.length
-                      ? `Allergens: ${item.allergens.join(", ")}`
-                      : "No major allergens"}
-                  </span>
-                  <span className="inline-flex items-center gap-1 ml-auto">
-                    <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                    4.8
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-3 flex items-center justify-between gap-1.5 pt-2.5 border-t border-slate-100 dark:border-slate-800">
                   <div className="min-w-0">
-                    <p className="text-base sm:text-xl font-bold truncate">
+                    <p className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-slate-100 truncate">
                       KSh {Number(item.price).toFixed(2)}
                     </p>
                     <p
-                      className={`text-[10px] sm:text-xs font-bold ${
-                        item.isAvailable ? "text-emerald-600" : "text-rose-600"
+                      className={`text-[10px] font-bold ${
+                        item.isAvailable
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-rose-600 dark:text-rose-400"
                       }`}
                     >
-                      {item.isAvailable ? "● Open" : "● Closed"}
+                      {item.isAvailable ? "● Open & In Stock" : "● Closed"}
                     </p>
                   </div>
 
@@ -218,17 +227,24 @@ export default function MenuPage() {
                         price: Number(item.price),
                         quantity: 1,
                         notes: "",
-                        image: item.image,
+                        image: itemImage,
                       })
                     }
                     disabled={!item.isAvailable}
-                    className={`shrink-0 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold transition-all ${
+                    className={`inline-flex items-center justify-center gap-1 rounded-xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold transition-all active:scale-95 ${
                       item.isAvailable
-                        ? "btn-primary"
+                        ? "bg-savori-orange text-white shadow-md shadow-savori-orange/20 hover:bg-savori-orangeDark hover:shadow-lg hover:scale-105"
                         : "cursor-not-allowed border border-rose-300 bg-rose-100 text-rose-700 shadow-none dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-400"
                     }`}
                   >
-                    {item.isAvailable ? "Add" : "Closed"}
+                    {item.isAvailable ? (
+                      <>
+                        <Plus size={14} className="stroke-[3]" />
+                        <span>Add</span>
+                      </>
+                    ) : (
+                      "Closed"
+                    )}
                   </button>
                 </div>
               </div>
