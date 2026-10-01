@@ -17,7 +17,6 @@ import { useCart } from "../context/CartContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import { getRealisticFoodImage } from "../lib/foodImages.js";
 
-const tags = ["vegetarian", "vegan", "halal", "gluten-free"];
 
 const MEAL_SERVICES = [
   { key: "breakfast", label: "Breakfast", hours: "06:00 – 09:00", icon: Coffee },
@@ -31,7 +30,6 @@ export default function MenuPage() {
   const { addItem } = useCart();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
-  const [selectedTag, setSelectedTag] = useState("all");
   const [liked, setLiked] = useState({});
 
   useEffect(() => {
@@ -46,11 +44,9 @@ export default function MenuPage() {
       const matchesSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.description.toLowerCase().includes(search.toLowerCase());
-      const matchesTag =
-        selectedTag === "all" || (item.dietaryTags || []).includes(selectedTag);
-      return matchesSearch && matchesTag;
+      return matchesSearch;
     });
-  }, [items, search, selectedTag]);
+  }, [items, search]);
 
   const isCategoryClosed = items.length > 0 && items.every((item) => !item.isAvailable);
 
@@ -130,27 +126,6 @@ export default function MenuPage() {
               className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 sm:py-3 pl-10 pr-4 text-sm dark:border-slate-700 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-savori-orange"
             />
           </div>
-        </div>
-
-        {/* Dietary Filter Tags - Horizontally Scrollable on Mobile */}
-        <div className="mt-3 sm:mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setSelectedTag("all")}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${selectedTag === "all" ? "bg-savori-orange text-white shadow-sm" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
-          >
-            All
-          </button>
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => setSelectedTag(tag)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold capitalize transition-all ${selectedTag === tag ? "bg-savori-orange text-white shadow-sm" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"}`}
-            >
-              {tag}
-            </button>
-          ))}
         </div>
       </div>
 
